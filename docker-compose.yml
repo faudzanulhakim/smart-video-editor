@@ -1,0 +1,14 @@
+services:
+  auto-video-editor:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Wajib diisi di .env -- tidak ada provider default. Isi 3 var ini
+      # sesuai provider AI (OpenAI-compatible) yang mau kamu pakai saat ini.
+      - AI_API_KEY=${AI_API_KEY}
+      - AI_BASE_URL=${AI_BASE_URL}
+      - AI_MODEL=${AI_MODEL}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs

@@ -1,0 +1,25 @@
+# Env & secrets -- JANGAN pernah commit API key
+.env
+.env.*
+!.env.example
+
+# Data user (hasil upload/proses video) -- jangan ikut di-commit
+uploads/
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Docker
+*.log

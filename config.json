@@ -1,0 +1,45 @@
+{
+  "remove_silence": {
+    "enabled": true,
+    "threshold_db": -35,
+    "min_len_sec": 0.6,
+    "padding_sec": 0.15
+  },
+  "subtitle": {
+    "enabled": true,
+    "model_size": "medium",
+    "language": "id",
+    "output_language": "id",
+    "_comment_model_size": "tiny/base/small = lebih cepat, kurang akurat. medium = seimbang (default). large-v3 = paling akurat, paling berat di CPU.",
+    "_comment_language": "language = bahasa SUMBER audio video (dipakai sebagai hint, default 'id'). output_language = bahasa teks subtitle hasil: 'id' (transkrip apa adanya) atau 'en' (diterjemahkan Whisper ke Inggris, tidak butuh AI_API_KEY).",
+    "style": {
+      "font_name": "Roboto",
+      "font_size": 16,
+      "primary_color": "&H00FFFFFF",
+      "outline_color": "&H00000000",
+      "bold": 1,
+      "outline_width": 1.6,
+      "shadow": 0.6,
+      "alignment": 2,
+      "margin_v": 40,
+      "_comment": "primary_color/outline_color pakai format ASS &HAABBGGRR (bukan RGB biasa). alignment: 2=tengah bawah, 8=tengah atas."
+    }
+  },
+  "intro_outro": {
+    "enabled": false,
+    "intro_path": "assets/intro.mp4",
+    "outro_path": "assets/outro.mp4"
+  },
+  "watermark": {
+    "enabled": false,
+    "image_path": "assets/watermark.png",
+    "position": "bottom-right",
+    "opacity": 0.7,
+    "width_ratio": 0.15
+  },
+  "extract_audio": {
+    "enabled": false,
+    "format": "mp3",
+    "_comment": "format bisa: mp3, m4a/aac, atau wav (lossless, file lebih besar)"
+  }
+}

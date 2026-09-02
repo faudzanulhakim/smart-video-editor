@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Auto Video Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 22px; }
+  fieldset { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; padding: 16px; }
+  legend { font-weight: 600; padding: 0 6px; }
+  label { display: block; margin: 8px 0; }
+  input[type="file"] { margin-top: 4px; }
+  button { background: #1a1a1a; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  #status { margin-top: 20px; padding: 14px; border-radius: 8px; background: #f4f4f4; display: none; }
+  #result { margin-top: 20px; display: none; }
+  .video-box { margin-bottom: 16px; }
+  video { max-width: 100%; border-radius: 8px; }
+  a.download { display: inline-block; margin-top: 6px; color: #0b5fff; }
+  .badge { display: inline-block; background: #eee; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>🎬 Auto Video Editor</h1>
+  <p>Upload video, atur fitur otomatis di bawah, biarkan sistem yang edit.</p>
+
+  <form id="uploadForm">
+    <fieldset>
+      <legend>Video</legend>
+      <label>File video (mp4/mov/mkv/avi/webm)
+        <input type="file" id="videoFile" accept="video/*" required>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Edit otomatis</legend>
+      <label><input type="checkbox" id="removeSilence" checked> Potong bagian sepi/diam</label>
+      <label><input type="checkbox" id="subtitle" checked> Tambah subtitle otomatis</label>
+      <label>Bahasa subtitle
+        <select id="subtitleLang" style="margin-left:6px;padding:4px 8px;border-radius:4px;border:1px solid #ccc;">
+          <option value="id" selected>Bahasa Indonesia</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="extractAudio"> Ekstrak audio (buat file .mp3 terpisah)</label>
+      <label>Watermark (opsional)
+        <input type="file" id="watermarkFile" accept="image/*">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Bantuan AI</legend>
+      <label><input type="checkbox" id="aiTitleCaption" checked> Buat judul & caption otomatis</label>
+      <label><input type="checkbox" id="aiHighlights" checked> Pilih & potong bagian highlight otomatis</label>
+    </fieldset>
+
+    <button type="submit" id="submitBtn">Proses Video</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="result"></div>
+
+<script>
+const form = document.getElementById('uploadForm');
+const statusDiv = document.getElementById('status');
+const resultDiv = document.getElementById('result');
+const submitBtn = document.getElementById('submitBtn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  submitBtn.disabled = true;
+  resultDiv.style.display = 'none';
+  statusDiv.style.display = 'block';
+  statusDiv.textContent = 'Mengunggah video...';
+
+  const fd = new FormData();
+  fd.append('file', document.getElementById('videoFile').files[0]);
+  fd.append('remove_silence', document.getElementById('removeSilence').checked);
+  fd.append('subtitle', document.getElementById('subtitle').checked);
+  fd.append('subtitle_lang', document.getElementById('subtitleLang').value);
+  fd.append('extract_audio', document.getElementById('extractAudio').checked);
+  fd.append('ai_title_caption', document.getElementById('aiTitleCaption').checked);
+  fd.append('ai_highlights', document.getElementById('aiHighlights').checked);
+  const wm = document.getElementById('watermarkFile').files[0];
+  if (wm) fd.append('watermark', wm);
+
+  const res = await fetch('/upload', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (!data.job_id) {
+    statusDiv.textContent = 'Gagal upload: ' + JSON.stringify(data);
+    submitBtn.disabled = false;
+    return;
+  }
+  pollStatus(data.job_id);
+});
+
+async function pollStatus(jobId) {
+  const res = await fetch('/status/' + jobId);
+  const job = await res.json();
+
+  if (job.status === 'error') {
+    statusDiv.textContent = 'Error: ' + job.error;
+    submitBtn.disabled = false;
+    return;
+  }
+  if (job.status === 'done') {
+    statusDiv.textContent = 'Selesai!';
+    showResult(job.result);
+    submitBtn.disabled = false;
+    return;
+  }
+  statusDiv.textContent = 'Status: ' + job.step + ' ...';
+  setTimeout(() => pollStatus(jobId), 2000);
+}
+
+function showResult(result) {
+  resultDiv.style.display = 'block';
+  let html = '';
+
+  if (result.title_caption) {
+    const tc = result.title_caption;
+    html += `<fieldset><legend>Judul & Caption (AI)</legend>
+      <p><strong>${tc.title || ''}</strong></p>
+      <p>${tc.caption || ''}</p>
+      <p>${(tc.hashtags || []).map(h => '#' + h.replace('#','')).join(' ')}</p>
+      </fieldset>`;
+  }
+
+  html += `<div class="video-box"><h3>Video Final</h3>
+    <video controls src="${result.final_video}"></video><br>
+    <a class="download" href="${result.final_video}" download>⬇ Download video final</a></div>`;
+
+  if (result.audio) {
+    html += `<div class="video-box"><h3>Audio (.mp3)</h3>
+      <audio controls src="${result.audio}" style="width:100%"></audio><br>
+      <a class="download" href="${result.audio}" download>⬇ Download audio</a></div>`;
+  }
+
+  if (result.highlight_video) {
+    html += `<div class="video-box"><h3>Highlight (AI)</h3>
+      <video controls src="${result.highlight_video}"></video><br>
+      <a class="download" href="${result.highlight_video}" download>⬇ Download highlight</a>`;
+    (result.highlight_reasons || []).forEach(r => {
+      html += `<div class="badge">${r.start.toFixed(1)}s–${r.end.toFixed(1)}s: ${r.reason}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  resultDiv.innerHTML = html;
+}
+</script>
+</body>
+</html>
