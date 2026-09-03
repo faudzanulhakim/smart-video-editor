@@ -35,36 +35,36 @@ draft title/caption generated automatically, with no manual work from scratch.
   <tr>
     <td align="center" width="33%">
       <img src="docs/pictures/screenshot-upload.png" alt="Video upload and editing settings" width="100%"/>
-      <br><b>Upload \& Settings</b>
+      <br><b>Upload & Settings</b>
       <br><sub>Upload a video and choose which editing features to apply</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/pictures/screenshot-processing.png" alt="AI features and processing status" width="100%"/>
-      <br><b>AI Features \& Processing</b>
-      <br><sub>Toggle AI title/caption and highlight clips, track live progress</sub>
+      <br><b>AI Features & Processing</b>
+      <br><sub>Toggle AI title caption and highlight clips, track live progress</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/pictures/screenshot-result.png" alt="Completed result with AI title, caption, and downloads" width="100%"/>
       <br><b>Result</b>
-      <br><sub>AI-generated title/caption, final video, and audio ready to download</sub>
+      <br><sub>AI-generated title caption, final video, and audio ready to download</sub>
     </td>
   </tr>
 </table>
 
-## AI Setup (required for auto title/caption \& highlight features)
+## AI Setup (required for auto title caption \& highlight features)
 
 The AI features use the standard OpenAI-compatible API, so they can be pointed at any
 compatible AI provider (including free ones) without changing any code — just set these
 3 env vars:
 
-* `AI\_API\_KEY` (required) — API key from your chosen provider
-* `AI\_BASE\_URL` (optional, default: Cerebras — free, get one at https://cloud.cerebras.ai)
-* `AI\_MODEL` (optional, default: `gpt-oss-120b`)
+* `AI_API_KEY` (required) — API key from your chosen provider
+* `AI_BASE_URL` (optional, default: Cerebras — free, get one at https://cloud.cerebras.ai)
+* `AI_MODEL` (optional, default: `gpt-oss-120b`)
 
-Without `AI\_API\_KEY`, the silence-removal/subtitle/watermark features still work normally —
+Without `AI_API_KEY`, the silence-removal,subtitle,watermark features still work normally —
 only the AI features will be disabled.
 
-Other providers you can use (just swap `AI\_BASE\_URL`/`AI\_MODEL`/`AI\_API\_KEY`, no code changes):
+Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no code changes):
 
 * **Cerebras** (default) — `https://api.cerebras.ai/v1` — free, sign up at cloud.cerebras.ai
 * **Groq** — `https://api.groq.com/openai/v1` — free, sign up at console.groq.com
@@ -101,12 +101,12 @@ nano .env
 ```
 
 ```env
-AI\_API\_KEY=your-api-key-here
-AI\_BASE\_URL=https://api.cerebras.ai/v1
-AI\_MODEL=gpt-oss-120b
+AI_API_KEY=your-api-key-here
+AI_BASE_URL=https://api.cerebras.ai/v1
+AI_MODEL=gpt-oss-120b
 ```
 
-> Change `AI\_BASE\_URL` and `AI\_MODEL` to match your chosen provider (see the list above). If
+> Change `AI_BASE_URL` and `AI_MODEL` to match your chosen provider (see the list above). If
 > you don't want to use the AI features yet, `.env` can be left empty — the other features
 > still work normally.
 
@@ -139,9 +139,9 @@ appear directly on the page and can be downloaded.
 ### Other common commands
 
 ```bash
-docker compose down                        # stop \& remove the container
+docker compose down                        # stop & remove the container
 docker compose up --build --force-recreate # full rebuild, force using the latest .env
-docker compose exec auto-video-editor env | grep AI\_   # check which env vars the container actually sees
+docker compose exec auto-video-editor env | grep AI_   # check which env vars the container actually sees
 docker compose logs -f                     # view real-time logs
 ```
 
@@ -150,12 +150,12 @@ docker compose logs -f                     # view real-time logs
 * **`port is already allocated`** — port 8000 is used by another process. Check with
 `sudo lsof -i :8000` or change the port in `docker-compose.yml` (e.g. `"8001:8000"`).
 * **Error 401 / `Missing Authentication header`** — the API key is wrong or empty. Make sure
-`AI\_API\_KEY` in `.env` matches the provider targeted by `AI\_BASE\_URL`, then run
+`AI_API_KEY` in `.env` matches the provider targeted by `AI_BASE_URL`, then run
 `docker compose up --build --force-recreate` so the container picks up the latest `.env`.
-* **Env vars in `.env` aren't being used** — if you previously ran `export AI\_API\_KEY=...`
+* **Env vars in `.env` aren't being used** — if you previously ran `export AI_API_KEY=...`
 directly in the terminal, the shell environment takes priority over `.env` for Docker
-Compose. Run `unset AI\_API\_KEY AI\_BASE\_URL AI\_MODEL` and then rerun `docker compose up --build`.
-* **Error 402 / `payment\_required\_error`** — the AI provider's balance/credit is depleted.
+Compose. Run `unset AI_API_KEY AI_BASE_URL AI_MODEL` and then rerun `docker compose up --build`.
+* **Error 402 / `payment_required_error`** — the AI provider's balance/credit is depleted.
 Check that provider's billing dashboard, or switch to another provider (e.g. OpenRouter)
 in `.env`.
 
@@ -180,7 +180,7 @@ pip install -r requirements.txt
 * **remove\_silence** — automatically cuts out silent/inactive parts of the video
 * **subtitle** — generates automatic subtitles from speech and burns them into the video
 
-  * `model\_size`: `tiny` (fastest) up to `large-v3` (most accurate, heaviest)
+  * `model_size`: `tiny` (fastest) up to `large-v3` (most accurate, heaviest)
   * `language`: `"id"` for Indonesian, or `null` for auto-detect
 * **intro\_outro** — adds a fixed intro/outro video at the beginning/end
 * **watermark** — adds a watermark image (logo, etc.) to a corner of the video
@@ -188,11 +188,11 @@ pip install -r requirements.txt
 ### 3\. Run
 
 ```bash
-python auto\_video\_editor.py --input ./raw\_videos --output ./processed\_videos --config config.json
+python auto_video_editor.py --input ./raw_videos --output ./processed_videos --config config.json
 ```
 
-All videos in the `raw\_videos` folder (mp4/mov/mkv/avi/webm/m4v) are processed automatically
-according to `config.json`, with results saved to `processed\_videos`.
+All videos in the `raw_videos` folder (mp4/mov/mkv/avi/webm/m4v) are processed automatically
+according to `config.json`, with results saved to `processed_videos`.
 
 \---
 
@@ -200,16 +200,16 @@ according to `config.json`, with results saved to `processed\_videos`.
 
 ```
 core/editor.py        - video editing logic (silence removal, subtitle, watermark, etc.)
-core/ai\_helper.py      - AI features (title/caption, highlight selection) via OpenAI-compatible API
+core/ai_helper.py      - AI features (title/caption, highlight selection) via OpenAI-compatible API
 web/main.py            - web app backend (FastAPI)
 web/static/index.html  - upload page
-auto\_video\_editor.py   - CLI / batch mode
+auto_video_editor.py   - CLI / batch mode
 Dockerfile, docker-compose.yml - run as a web app
 ```
 
 ## Notes
 
-* Subtitle processing (speech-to-text) takes time depending on `model\_size` and video length —
+* Subtitle processing (speech-to-text) takes time depending on `model_size` and video length —
 `small` is usually accurate enough and not too slow on a typical CPU.
 * Web app jobs are stored in memory (sufficient for personal/small-team use). If you later
 need multi-user support with many parallel/queued jobs, this can be extended with a queue
