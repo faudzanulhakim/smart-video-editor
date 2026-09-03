@@ -1,9 +1,9 @@
-# Env & secrets -- JANGAN pernah commit API key
+# Environment variables & secrets -- NEVER commit API keys
 .env
 .env.*
 !.env.example
 
-# Data user (hasil upload/proses video) -- jangan ikut di-commit
+# User data (uploaded/processed video files) -- do not commit
 uploads/
 outputs/
 
@@ -16,7 +16,7 @@ venv/
 env/
 *.egg-info/
 
-# OS/editor
+# OS / editor
 .DS_Store
 .vscode/
 .idea/
