@@ -1,96 +1,509 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Auto Video Editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Grotesk:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
-  h1 { font-size: 22px; }
-  fieldset { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; padding: 16px; }
-  legend { font-weight: 600; padding: 0 6px; }
-  label { display: block; margin: 8px 0; }
-  input[type="file"] { margin-top: 4px; }
-  button { background: #1a1a1a; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 15px; }
-  button:disabled { background: #999; cursor: not-allowed; }
-  #status { margin-top: 20px; padding: 14px; border-radius: 8px; background: #f4f4f4; display: none; }
-  #result { margin-top: 20px; display: none; }
-  .video-box { margin-bottom: 16px; }
-  video { max-width: 100%; border-radius: 8px; }
-  a.download { display: inline-block; margin-top: 6px; color: #0b5fff; }
-  .badge { display: inline-block; background: #eee; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-top: 6px; }
+  :root{
+    --bg:#FAFAF7;
+    --paper:#FFFFFF;
+    --ink:#131215;
+    --ink-dim:#6E6E76;
+    --ink-faint:#B4B3B8;
+    --line:#E7E5E0;
+    --accent:#4527E0;
+    --accent-2:#6A4CFF;
+    --gold:#F2A900;
+    --green:#1AA76E;
+    --r-lg:20px;
+    --r-md:12px;
+    --ease:cubic-bezier(.16,.84,.24,1);
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Space Grotesk',-apple-system,'Segoe UI',Arial,sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    padding:0 20px 100px;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app{ max-width:600px; margin:0 auto; }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:56px 0 40px;
+    border-bottom:2px solid var(--ink);
+    margin-bottom:36px;
+  }
+  .hero-top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:26px;
+  }
+  .mark{
+    display:flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:11px; color:var(--ink-dim);
+    letter-spacing:.02em;
+  }
+  .mark svg{ display:block; }
+  .live-pill{
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);
+    border:1px solid var(--line); border-radius:999px;
+    padding:5px 10px 5px 8px;
+    transition:border-color .2s var(--ease), color .2s var(--ease);
+  }
+  .live-pill.live{ border-color:var(--accent); color:var(--accent); }
+  .eq{ display:flex; align-items:flex-end; gap:2px; height:10px; }
+  .eq span{ width:2.5px; border-radius:1px; background:var(--ink-faint); height:3px; transition:background .2s; }
+  .live-pill.live .eq span{ background:var(--accent); animation:eq 1s ease-in-out infinite; }
+  .live-pill .eq span:nth-child(1){ animation-delay:-.9s; }
+  .live-pill .eq span:nth-child(2){ animation-delay:-.6s; }
+  .live-pill .eq span:nth-child(3){ animation-delay:-1.1s; }
+  .live-pill .eq span:nth-child(4){ animation-delay:-.3s; }
+  .live-pill .eq span:nth-child(5){ animation-delay:-.75s; }
+  @keyframes eq{
+    0%,100%{ height:3px; }
+    50%{ height:10px; }
+  }
+  @media (prefers-reduced-motion: reduce){ .live-pill.live .eq span{ animation:none; height:7px; } }
+
+  h1{
+    font-size:clamp(30px,7vw,42px);
+    font-weight:700;
+    letter-spacing:-.02em;
+    margin:0 0 10px;
+    line-height:1.05;
+  }
+  .hero p{
+    color:var(--ink-dim);
+    font-size:15px;
+    margin:0;
+    max-width:38ch;
+  }
+
+  /* ---------- module ---------- */
+  .module{ margin-bottom:26px; position:relative; }
+  .module-head{
+    position:relative;
+    display:flex; align-items:flex-end;
+    margin-bottom:14px;
+    min-height:46px;
+  }
+  .ghost-num{
+    font-family:var(--sans);
+    font-size:74px;
+    font-weight:700;
+    color:var(--ink);
+    opacity:.06;
+    line-height:.7;
+    position:absolute;
+    left:-6px; bottom:-10px;
+    user-select:none;
+    pointer-events:none;
+  }
+  .module-title{
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink);
+    position:relative;
+    padding-left:2px;
+  }
+  .module-body{
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    border-radius:var(--r-lg);
+    padding:6px 20px;
+    box-shadow:4px 4px 0 rgba(19,18,21,.06);
+  }
+
+  /* ---------- source / drop zone ---------- */
+  .frame{
+    position:relative;
+    margin:14px 0;
+    border:1.5px dashed var(--ink-faint);
+    border-radius:var(--r-md);
+    padding:36px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s var(--ease), background .2s var(--ease), transform .15s var(--ease);
+    display:block;
+  }
+  .frame:hover{ border-color:var(--ink); }
+  .frame.drag{
+    border-color:var(--accent);
+    border-style:solid;
+    background:#F4F2FF;
+    transform:scale(1.008);
+  }
+  .frame.has-file{
+    border-style:solid;
+    border-color:var(--accent);
+    background:#F8F7FF;
+  }
+  .frame input[type=file]{
+    position:absolute; inset:0; width:100%; height:100%;
+    opacity:0; cursor:pointer;
+  }
+  .frame .corner{ position:absolute; width:16px; height:16px; border-color:var(--ink-faint); transition:border-color .2s var(--ease); }
+  .frame.has-file .corner, .frame.drag .corner{ border-color:var(--accent); }
+  .corner.tl{ top:8px; left:8px; border-top:1.5px solid; border-left:1.5px solid; }
+  .corner.tr{ top:8px; right:8px; border-top:1.5px solid; border-right:1.5px solid; }
+  .corner.bl{ bottom:8px; left:8px; border-bottom:1.5px solid; border-left:1.5px solid; }
+  .corner.br{ bottom:8px; right:8px; border-bottom:1.5px solid; border-right:1.5px solid; }
+  .frame-icon{
+    width:38px; height:38px; margin:0 auto 14px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    border:1.5px solid var(--ink-faint);
+    color:var(--ink-dim);
+    transition:color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+  }
+  .frame.has-file .frame-icon, .frame.drag .frame-icon{ color:#fff; border-color:var(--accent); background:var(--accent); }
+  .frame-label{ font-size:15px; color:var(--ink); margin-bottom:4px; font-weight:600; }
+  .frame-sub{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); }
+  .frame-filename{
+    font-family:var(--mono); font-size:12px; color:var(--accent);
+    margin-top:10px; word-break:break-all;
+  }
+
+  /* ---------- rows / toggles ---------- */
+  .row{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 2px;
+    border-bottom:1px solid var(--line);
+  }
+  .row:last-child{ border-bottom:none; }
+  .row label.main{ font-size:14px; color:var(--ink); cursor:pointer; flex:1; }
+
+  .toggle{ position:relative; width:38px; height:22px; flex-shrink:0; }
+  .toggle input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; z-index:2; }
+  .toggle .track{ position:absolute; inset:0; background:var(--line); border-radius:999px; transition:background .2s var(--ease); }
+  .toggle .thumb{
+    position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(19,18,21,.3);
+    transition:transform .2s var(--ease);
+  }
+  .toggle input:checked ~ .track{ background:var(--accent); }
+  .toggle input:checked ~ .thumb{ transform:translateX(16px); }
+  .toggle input:focus-visible ~ .track{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .pillgroup{ display:flex; border:1.5px solid var(--ink); border-radius:999px; overflow:hidden; flex-shrink:0; }
+  .pillgroup button{
+    font-family:var(--sans); font-size:11.5px; font-weight:600;
+    padding:5px 12px; border:none; background:transparent; color:var(--ink-dim);
+    cursor:pointer; transition:background .15s var(--ease), color .15s var(--ease);
+  }
+  .pillgroup button.active{ background:var(--ink); color:#fff; }
+
+  .row-file{ display:flex; align-items:center; gap:10px; padding:14px 2px; }
+  .row-file label.main{ font-size:14px; color:var(--ink); flex:1; }
+  .file-btn{
+    display:inline-block; font-family:var(--mono); font-size:11px; color:var(--ink-dim);
+    border:1.5px solid var(--ink); border-radius:999px; padding:6px 13px; cursor:pointer;
+    white-space:nowrap; transition:background .15s var(--ease), color .15s var(--ease);
+  }
+  .file-btn:hover{ background:var(--ink); color:#fff; }
+  .file-btn input{ display:none; }
+  .file-name{
+    font-family:var(--mono); font-size:11px; color:var(--accent);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;
+  }
+
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
+
+  /* ---------- primary action ---------- */
+  .go{
+    width:100%;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--ink); color:#fff;
+    border:1.5px solid var(--ink);
+    border-radius:999px;
+    padding:17px 20px;
+    font-family:var(--sans); font-size:15px; font-weight:600;
+    cursor:pointer; margin-top:30px;
+    box-shadow:4px 4px 0 rgba(19,18,21,.15);
+    transition:transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+  }
+  .go:hover:not(:disabled){ background:var(--accent); border-color:var(--accent); transform:translate(-2px,-2px); box-shadow:6px 6px 0 rgba(69,39,224,.2); }
+  .go:active:not(:disabled){ transform:translate(0,0); box-shadow:2px 2px 0 rgba(19,18,21,.15); }
+  .go:disabled{ background:var(--ink-faint); border-color:var(--ink-faint); cursor:not-allowed; box-shadow:none; }
+
+  /* ---------- status readout ---------- */
+  #status{
+    display:none; align-items:center; gap:12px;
+    margin-top:24px;
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    border-radius:999px;
+    padding:12px 18px;
+    font-family:var(--mono); font-size:12px; color:var(--ink-dim);
+    animation:fadeIn .3s var(--ease);
+  }
+  @keyframes fadeIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+  #status.show{ display:flex; }
+  #status .txt{ flex:1; }
+  #status .elapsed{ color:var(--ink-faint); font-size:11px; }
+  #status.err{ border-color:#D6412B; color:#D6412B; }
+  #status.err .eq span{ background:#D6412B; }
+  #status.ok{ border-color:var(--green); color:var(--green); }
+  #status.ok .eq span{ background:var(--green); }
+
+  /* ---------- results ---------- */
+  #result{ display:none; margin-top:34px; }
+  #result.show{ display:block; animation:fadeIn .4s var(--ease); }
+  .result-block{
+    position:relative;
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    border-radius:var(--r-lg);
+    padding:20px 22px 22px;
+    margin-bottom:18px;
+    box-shadow:4px 4px 0 rgba(19,18,21,.06);
+  }
+  .result-block h3{
+    font-size:11px; font-weight:600; letter-spacing:.03em;
+    color:var(--ink-faint); margin:0 0 12px; text-transform:uppercase;
+  }
+  .result-block p{ margin:0 0 8px; font-size:14px; }
+  .result-block p.title{ font-weight:700; color:var(--ink); font-size:17px; letter-spacing:-.01em; }
+  .result-block p.tags{ font-family:var(--mono); font-size:12px; color:var(--accent); }
+  video, audio{ width:100%; border-radius:var(--r-md); display:block; background:#000; }
+  audio{ background:transparent; }
+  a.download{
+    display:inline-flex; align-items:center; gap:6px; margin-top:14px;
+    font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--ink);
+    text-decoration:none; border-bottom:1.5px solid var(--ink); padding-bottom:1px;
+    transition:color .15s var(--ease), border-color .15s var(--ease);
+  }
+  a.download:hover{ color:var(--accent); border-color:var(--accent); }
+  .badge{
+    display:inline-block; font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);
+    background:var(--bg); border:1px solid var(--line); border-radius:999px;
+    padding:5px 10px; margin:8px 6px 0 0;
+  }
+
+  footer{
+    max-width:600px; margin:60px auto 0; padding:0 0 20px;
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);
+    text-align:center;
+  }
+
+  @media (max-width:480px){
+    .hero{ padding:40px 0 30px; }
+    .module-body{ padding:4px 15px; }
+    .frame{ padding:28px 12px; }
+    .ghost-num{ font-size:56px; }
+  }
 </style>
 </head>
 <body>
-  <h1>🎬 Auto Video Editor</h1>
-  <p>Upload video, atur fitur otomatis di bawah, biarkan sistem yang edit.</p>
+<div class="app">
+
+  <div class="hero">
+    <div class="hero-top">
+      <div class="mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Local Processing · ffmpeg · Whisper
+      </div>
+      <div class="live-pill" id="livePill">
+        <div class="eq"><span></span><span></span><span></span><span></span><span></span></div>
+        <span id="liveLabel">Standby</span>
+      </div>
+    </div>
+    <h1>Auto Video Editor</h1>
+    <p>Upload your video, select the features you need, and the system will process it automatically — silent segments removed, subtitles generated, and title and caption prepared automatically.</p>
+  </div>
 
   <form id="uploadForm">
-    <fieldset>
-      <legend>Video</legend>
-      <label>File video (mp4/mov/mkv/avi/webm)
+
+    <div class="module">
+      <div class="module-head"><span class="ghost-num">01</span><span class="module-title">Video Source</span></div>
+      <label class="frame" id="dropFrame">
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+        <div class="frame-icon" id="frameIcon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </div>
+        <div class="frame-label" id="frameLabel">Select or drag your video file here</div>
+        <div class="frame-sub">Supported formats: MP4, MOV, MKV, AVI, WEBM</div>
+        <div class="frame-filename" id="frameFilename"></div>
         <input type="file" id="videoFile" accept="video/*" required>
       </label>
-    </fieldset>
+    </div>
 
-    <fieldset>
-      <legend>Edit otomatis</legend>
-      <label><input type="checkbox" id="removeSilence" checked> Potong bagian sepi/diam</label>
-      <label><input type="checkbox" id="subtitle" checked> Tambah subtitle otomatis</label>
-      <label>Bahasa subtitle
-        <select id="subtitleLang" style="margin-left:6px;padding:4px 8px;border-radius:4px;border:1px solid #ccc;">
-          <option value="id" selected>Bahasa Indonesia</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <label><input type="checkbox" id="extractAudio"> Ekstrak audio (buat file .mp3 terpisah)</label>
-      <label>Watermark (opsional)
-        <input type="file" id="watermarkFile" accept="image/*">
-      </label>
-    </fieldset>
+    <div class="module">
+      <div class="module-head"><span class="ghost-num">02</span><span class="module-title">Editing Settings</span></div>
+      <div class="module-body">
+        <div class="row">
+          <label class="main" for="removeSilence">Auto remove silence</label>
+          <span class="toggle"><input type="checkbox" id="removeSilence" checked><span class="track"></span><span class="thumb"></span></span>
+        </div>
+        <div class="row">
+          <label class="main" for="subtitle">Auto subtitle</label>
+          <div class="pillgroup" id="langPill">
+            <button type="button" data-lang="id" class="active">ID</button>
+            <button type="button" data-lang="en">EN</button>
+          </div>
+          <span class="toggle"><input type="checkbox" id="subtitle" checked><span class="track"></span><span class="thumb"></span></span>
+        </div>
+        <div class="row">
+          <label class="main" for="extractAudio">Extract audio (MP3)</label>
+          <span class="toggle"><input type="checkbox" id="extractAudio"><span class="track"></span><span class="thumb"></span></span>
+        </div>
+        <div class="row-file">
+          <label class="main">Watermark (optional)</label>
+          <span class="file-name" id="wmName"></span>
+          <label class="file-btn">Select File<input type="file" id="watermarkFile" accept="image/*"></label>
+        </div>
+      </div>
+    </div>
 
-    <fieldset>
-      <legend>Bantuan AI</legend>
-      <label><input type="checkbox" id="aiTitleCaption" checked> Buat judul & caption otomatis</label>
-      <label><input type="checkbox" id="aiHighlights" checked> Pilih & potong bagian highlight otomatis</label>
-    </fieldset>
+    <div class="module">
+      <div class="module-head"><span class="ghost-num">03</span><span class="module-title">AI Features</span></div>
+      <div class="module-body">
+        <div class="row">
+          <label class="main" for="aiTitleCaption">AI title & caption</label>
+          <span class="toggle"><input type="checkbox" id="aiTitleCaption" checked><span class="track"></span><span class="thumb"></span></span>
+        </div>
+        <div class="row">
+          <label class="main" for="aiHighlights">Auto highlight clips</label>
+          <span class="toggle"><input type="checkbox" id="aiHighlights" checked><span class="track"></span><span class="thumb"></span></span>
+        </div>
+      </div>
+    </div>
 
-    <button type="submit" id="submitBtn">Proses Video</button>
+    <button type="submit" id="submitBtn" class="go">Start Video Processing</button>
   </form>
 
-  <div id="status"></div>
+  <div id="status">
+    <div class="eq"><span></span><span></span><span></span><span></span><span></span></div>
+    <span class="txt" id="statusTxt"></span>
+    <span class="elapsed" id="statusElapsed"></span>
+  </div>
   <div id="result"></div>
+
+</div>
+
+<footer>All processing is performed locally — no data is uploaded to the cloud, except for the optional AI features.</footer>
 
 <script>
 const form = document.getElementById('uploadForm');
 const statusDiv = document.getElementById('status');
+const statusTxt = document.getElementById('statusTxt');
+const statusElapsed = document.getElementById('statusElapsed');
+const livePill = document.getElementById('livePill');
+const liveLabel = document.getElementById('liveLabel');
 const resultDiv = document.getElementById('result');
 const submitBtn = document.getElementById('submitBtn');
+const videoInput = document.getElementById('videoFile');
+const dropFrame = document.getElementById('dropFrame');
+const frameLabel = document.getElementById('frameLabel');
+const frameFilename = document.getElementById('frameFilename');
+const wmInput = document.getElementById('watermarkFile');
+const wmName = document.getElementById('wmName');
+const langPill = document.getElementById('langPill');
+
+let subtitleLangValue = 'id';
+langPill.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  langPill.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  subtitleLangValue = btn.dataset.lang;
+});
+
+let elapsedTimer = null, elapsedStart = null;
+
+function fmtSize(bytes){
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function showChosenFile(file){
+  if (file) {
+    dropFrame.classList.add('has-file');
+    frameLabel.textContent = 'Video Selected';
+    frameFilename.textContent = `${file.name}  ·  ${fmtSize(file.size)}`;
+  } else {
+    dropFrame.classList.remove('has-file');
+    frameLabel.textContent = 'Select or drag your video file here';
+    frameFilename.textContent = '';
+  }
+}
+videoInput.addEventListener('change', () => showChosenFile(videoInput.files[0]));
+
+['dragenter','dragover'].forEach(evt => dropFrame.addEventListener(evt, (e) => { e.preventDefault(); dropFrame.classList.add('drag'); }));
+['dragleave','drop'].forEach(evt => dropFrame.addEventListener(evt, (e) => { e.preventDefault(); dropFrame.classList.remove('drag'); }));
+dropFrame.addEventListener('drop', (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f) { videoInput.files = e.dataTransfer.files; showChosenFile(f); }
+});
+
+wmInput.addEventListener('change', () => { wmName.textContent = wmInput.files[0] ? wmInput.files[0].name : ''; });
+
+function setStatus(text, mode){
+  statusDiv.classList.add('show');
+  statusDiv.classList.remove('err', 'ok');
+  if (mode) statusDiv.classList.add(mode);
+  statusTxt.textContent = text;
+}
+function setLive(on, label){
+  livePill.classList.toggle('live', on);
+  liveLabel.textContent = label || (on ? 'processing' : 'idle');
+}
+function startElapsed(){
+  elapsedStart = Date.now();
+  clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - elapsedStart) / 1000);
+    statusElapsed.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  }, 1000);
+}
+function stopElapsed(){ clearInterval(elapsedTimer); }
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   submitBtn.disabled = true;
-  resultDiv.style.display = 'none';
-  statusDiv.style.display = 'block';
-  statusDiv.textContent = 'Mengunggah video...';
+  resultDiv.classList.remove('show');
+  resultDiv.innerHTML = '';
+  setLive(true, 'Processing');
+  setStatus('Uploading video...');
+  startElapsed();
 
   const fd = new FormData();
-  fd.append('file', document.getElementById('videoFile').files[0]);
+  fd.append('file', videoInput.files[0]);
   fd.append('remove_silence', document.getElementById('removeSilence').checked);
   fd.append('subtitle', document.getElementById('subtitle').checked);
-  fd.append('subtitle_lang', document.getElementById('subtitleLang').value);
+  fd.append('subtitle_lang', subtitleLangValue);
   fd.append('extract_audio', document.getElementById('extractAudio').checked);
   fd.append('ai_title_caption', document.getElementById('aiTitleCaption').checked);
   fd.append('ai_highlights', document.getElementById('aiHighlights').checked);
-  const wm = document.getElementById('watermarkFile').files[0];
+  const wm = wmInput.files[0];
   if (wm) fd.append('watermark', wm);
 
-  const res = await fetch('/upload', { method: 'POST', body: fd });
-  const data = await res.json();
+  let res, data;
+  try {
+    res = await fetch('/upload', { method: 'POST', body: fd });
+    data = await res.json();
+  } catch (err) {
+    setStatus('Video upload failed: ' + err, 'err'); setLive(false,'Failed'); stopElapsed();
+    submitBtn.disabled = false; return;
+  }
   if (!data.job_id) {
-    statusDiv.textContent = 'Gagal upload: ' + JSON.stringify(data);
-    submitBtn.disabled = false;
-    return;
+    setStatus('Video upload failed: ' + JSON.stringify(data), 'err'); setLive(false,'Failed'); stopElapsed();
+    submitBtn.disabled = false; return;
   }
   pollStatus(data.job_id);
 });
@@ -100,49 +513,46 @@ async function pollStatus(jobId) {
   const job = await res.json();
 
   if (job.status === 'error') {
-    statusDiv.textContent = 'Error: ' + job.error;
-    submitBtn.disabled = false;
-    return;
+    setStatus('An error occurred: ' + job.error, 'err'); setLive(false, 'Failed'); stopElapsed();
+    submitBtn.disabled = false; return;
   }
   if (job.status === 'done') {
-    statusDiv.textContent = 'Selesai!';
+    setStatus('Processing completed', 'ok'); setLive(false, 'Completed'); stopElapsed();
     showResult(job.result);
-    submitBtn.disabled = false;
-    return;
+    submitBtn.disabled = false; return;
   }
-  statusDiv.textContent = 'Status: ' + job.step + ' ...';
+  setStatus(job.step + ' ...');
   setTimeout(() => pollStatus(jobId), 2000);
 }
 
 function showResult(result) {
-  resultDiv.style.display = 'block';
+  resultDiv.classList.add('show');
   let html = '';
 
   if (result.title_caption) {
     const tc = result.title_caption;
-    html += `<fieldset><legend>Judul & Caption (AI)</legend>
-      <p><strong>${tc.title || ''}</strong></p>
+    html += `<div class="result-block"><h3>Title & Caption (AI Generated)</h3>
+      <p class="title">${tc.title || ''}</p>
       <p>${tc.caption || ''}</p>
-      <p>${(tc.hashtags || []).map(h => '#' + h.replace('#','')).join(' ')}</p>
-      </fieldset>`;
+      <p class="tags">${(tc.hashtags || []).map(h => '#' + h.replace('#','')).join('  ')}</p></div>`;
   }
 
-  html += `<div class="video-box"><h3>Video Final</h3>
-    <video controls src="${result.final_video}"></video><br>
-    <a class="download" href="${result.final_video}" download>⬇ Download video final</a></div>`;
+  html += `<div class="result-block"><h3>Final Video</h3>
+    <video controls src="${result.final_video}"></video>
+    <a class="download" href="${result.final_video}" download>↓ Download final video</a></div>`;
 
   if (result.audio) {
-    html += `<div class="video-box"><h3>Audio (.mp3)</h3>
-      <audio controls src="${result.audio}" style="width:100%"></audio><br>
-      <a class="download" href="${result.audio}" download>⬇ Download audio</a></div>`;
+    html += `<div class="result-block"><h3>Audio (MP3)</h3>
+      <audio controls src="${result.audio}"></audio>
+      <a class="download" href="${result.audio}" download>↓ Download audio</a></div>`;
   }
 
   if (result.highlight_video) {
-    html += `<div class="video-box"><h3>Highlight (AI)</h3>
-      <video controls src="${result.highlight_video}"></video><br>
-      <a class="download" href="${result.highlight_video}" download>⬇ Download highlight</a>`;
+    html += `<div class="result-block"><h3>Highlight (AI Generated)</h3>
+      <video controls src="${result.highlight_video}"></video>
+      <a class="download" href="${result.highlight_video}" download>↓ Download highlight video</a><br>`;
     (result.highlight_reasons || []).forEach(r => {
-      html += `<div class="badge">${r.start.toFixed(1)}s–${r.end.toFixed(1)}s: ${r.reason}</div>`;
+      html += `<span class="badge">${r.start.toFixed(1)}s–${r.end.toFixed(1)}s · ${r.reason}</span>`;
     });
     html += `</div>`;
   }

@@ -1,97 +1,189 @@
 # Auto Video Editor
 
-Tools otomatisasi edit video, tersedia dalam 2 bentuk:
+## About This Project
 
-- **Web app** (disarankan) — upload video lewat browser, centang fitur yang mau dipakai, download hasil.
-- **CLI/batch** — proses banyak video sekaligus dari folder, tanpa UI.
+**Auto Video Editor** is a web application for automating repetitive video editing tasks,
+so you don't have to manually edit each clip in tools like Premiere or CapCut. The workflow
+is simple: upload a video through the browser, select the features you want, and the system
+processes it automatically in the background using `ffmpeg` and `Whisper` (speech-to-text).
+The result is playable and downloadable directly from the same page.
 
-Fitur:
-- Potong bagian sepi/diam otomatis
-- Subtitle otomatis dari suara (speech-to-text)
-- Watermark & intro/outro
-- **AI**: judul + caption otomatis dari isi video, dan pemilihan bagian highlight otomatis
-  (dipotong jadi video pendek terpisah) — pakai Claude API
+Available in 2 forms:
 
-## Setup AI (wajib untuk fitur judul/caption & highlight otomatis)
+- **Web app** (recommended) — upload a video through the browser, check the features you want, download the result.
+- **CLI/batch** — process many videos at once from a folder, no UI.
 
-Fitur AI pakai standar OpenAI-compatible API, jadi bisa diarahkan ke provider AI
-mana saja yang kompatibel (termasuk yang gratis) tanpa ubah kode -- cukup set 3
-env var ini:
+**Available features:**
 
-- `AI_API_KEY` (wajib) -- API key dari provider pilihanmu
-- `AI_BASE_URL` (opsional, default: Cerebras -- gratis, ambil di https://cloud.cerebras.ai)
-- `AI_MODEL` (opsional, default: `gpt-oss-120b`)
+1. **Auto silence removal** — detects and cuts out silent or inactive segments of the video
+   (e.g. long dead air), shortening the video without manually searching for timestamps.
+2. **Auto subtitle** — transcribes the video's speech into text and burns it directly into
+   the video, with a choice of Indonesian or English (web app).
+3. **Audio extraction (MP3)** — extracts just the audio track as a separate MP3 file, useful
+   when you only need the audio, e.g. turning a video recording into a podcast (web app).
+4. **Watermark** (logo/image) & **intro/outro** (CLI/batch).
+5. **AI features** — automatic title + caption generation from the video's content, and
+   automatic highlight selection (cut into separate short clips) — uses an OpenAI-compatible API.
 
-Tanpa `AI_API_KEY` ini, fitur potong-sepi/subtitle/watermark tetap jalan normal — hanya fitur AI yang nonaktif.
+**Use case**: ideal for turning raw footage (podcast recordings, webinars, raw clips) into
+ready-to-publish content — clean video with dead air removed, subtitles included, and a
+draft title/caption generated automatically, with no manual work from scratch.
 
-Provider lain yang bisa dipakai (tinggal ganti `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, tanpa ubah kode):
-- **Cerebras** (default) — `https://api.cerebras.ai/v1` — gratis, daftar di cloud.cerebras.ai
-- **Groq** — `https://api.groq.com/openai/v1` — gratis, daftar di console.groq.com
-- **OpenRouter** — `https://openrouter.ai/api/v1` — banyak model gratis
+## AI Setup (required for auto title/caption & highlight features)
+
+The AI features use the standard OpenAI-compatible API, so they can be pointed at any
+compatible AI provider (including free ones) without changing any code — just set these
+3 env vars:
+
+- `AI_API_KEY` (required) — API key from your chosen provider
+- `AI_BASE_URL` (optional, default: Cerebras — free, get one at https://cloud.cerebras.ai)
+- `AI_MODEL` (optional, default: `gpt-oss-120b`)
+
+Without `AI_API_KEY`, the silence-removal/subtitle/watermark features still work normally —
+only the AI features will be disabled.
+
+Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no code changes):
+- **Cerebras** (default) — `https://api.cerebras.ai/v1` — free, sign up at cloud.cerebras.ai
+- **Groq** — `https://api.groq.com/openai/v1` — free, sign up at console.groq.com
+- **OpenRouter** — `https://openrouter.ai/api/v1` — many free models
 - **Together.ai** — `https://api.together.xyz/v1`
 
-## Web App (Docker) — disarankan
+## Web App (Docker) — recommended
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) & Docker Compose installed
+- An API key from one of the AI providers (see **AI Setup** above) — optional, but required if you want the auto title/caption & highlight features
+
+### 1. Clone the repo and enter the project folder
 
 ```bash
-export AI_API_KEY=xxxxxxxxxx
+git clone <this-repo-url>
+cd transcribe-editor-vidio
+```
+
+### 2. Create the `.env` file
+
+Docker Compose automatically reads the `.env` file in the same folder as `docker-compose.yml`.
+Copy it from the provided example:
+
+```bash
+cp .env.example .env
+```
+
+Then edit it to match the provider you're using:
+
+```bash
+nano .env
+```
+
+```env
+AI_API_KEY=your-api-key-here
+AI_BASE_URL=https://api.cerebras.ai/v1
+AI_MODEL=gpt-oss-120b
+```
+
+> Change `AI_BASE_URL` and `AI_MODEL` to match your chosen provider (see the list above). If
+> you don't want to use the AI features yet, `.env` can be left empty — the other features
+> still work normally.
+
+### 3. Build & run
+
+```bash
 docker compose up --build
 ```
 
-Buka **http://localhost:8000** di browser → upload video → centang fitur yang diinginkan →
-klik "Proses Video". Hasil (video final, highlight, judul/caption) langsung tampil di halaman
-dan bisa didownload.
+This command will:
+- Build the image from the `Dockerfile` (installs Python, ffmpeg, and other dependencies)
+- Create the `auto-video-editor` container, exposing port **8000**
+- Mount the `./uploads` and `./outputs` folders into the container, so processed files
+  remain on the host even if the container is removed
+
+To run it in the background (without blocking the terminal):
+```bash
+docker compose up --build -d
+```
+
+### 4. Access the web app
+
+Open **http://localhost:8000** in your browser → upload a video → check the features you want
+(silence removal, subtitle + language, audio extraction, watermark, AI title/caption, AI
+highlight) → click **"Start Video Processing"**. The results (final video, highlight, title/caption)
+appear directly on the page and can be downloaded.
+
+### Other common commands
+
+```bash
+docker compose down                        # stop & remove the container
+docker compose up --build --force-recreate # full rebuild, force using the latest .env
+docker compose exec auto-video-editor env | grep AI_   # check which env vars the container actually sees
+docker compose logs -f                     # view real-time logs
+```
+
+### Quick troubleshooting
+
+- **`port is already allocated`** — port 8000 is used by another process. Check with
+  `sudo lsof -i :8000` or change the port in `docker-compose.yml` (e.g. `"8001:8000"`).
+- **Error 401 / `Missing Authentication header`** — the API key is wrong or empty. Make sure
+  `AI_API_KEY` in `.env` matches the provider targeted by `AI_BASE_URL`, then run
+  `docker compose up --build --force-recreate` so the container picks up the latest `.env`.
+- **Env vars in `.env` aren't being used** — if you previously ran `export AI_API_KEY=...`
+  directly in the terminal, the shell environment takes priority over `.env` for Docker
+  Compose. Run `unset AI_API_KEY AI_BASE_URL AI_MODEL` and then rerun `docker compose up --build`.
+- **Error 402 / `payment_required_error`** — the AI provider's balance/credit is depleted.
+  Check that provider's billing dashboard, or switch to another provider (e.g. OpenRouter)
+  in `.env`.
 
 ---
 
 ## CLI / Batch mode
 
-Untuk proses banyak video sekaligus dari folder tanpa UI (belum termasuk fitur AI):
+For processing many videos at once from a folder without a UI (AI features not included):
 
-### 1. Instalasi (sekali saja)
+### 1. Installation (one-time)
 
 ```bash
 sudo apt install ffmpeg          # Ubuntu/Debian
-# atau: brew install ffmpeg      # Mac
-# atau download dari https://ffmpeg.org untuk Windows
+# or: brew install ffmpeg        # Mac
+# or download from https://ffmpeg.org for Windows
 
 pip install -r requirements.txt
 ```
 
-### 2. Atur aturan edit di `config.json`
+### 2. Configure editing rules in `config.json`
 
-- **remove_silence** — potong otomatis bagian video yang sepi/diam
-- **subtitle** — generate subtitle otomatis dari suara, burn ke video
-  - `model_size`: `tiny` (tercepat) s/d `large-v3` (paling akurat, paling berat)
-  - `language`: `"id"` untuk Bahasa Indonesia, atau `null` untuk auto-detect
-- **intro_outro** — tambahkan video intro/outro tetap di awal/akhir
-- **watermark** — tambahkan gambar watermark (logo, dll) di pojok video
+- **remove_silence** — automatically cuts out silent/inactive parts of the video
+- **subtitle** — generates automatic subtitles from speech and burns them into the video
+  - `model_size`: `tiny` (fastest) up to `large-v3` (most accurate, heaviest)
+  - `language`: `"id"` for Indonesian, or `null` for auto-detect
+- **intro_outro** — adds a fixed intro/outro video at the beginning/end
+- **watermark** — adds a watermark image (logo, etc.) to a corner of the video
 
-### 3. Jalankan
+### 3. Run
 
 ```bash
-python auto_video_editor.py --input ./videos_mentah --output ./videos_hasil --config config.json
+python auto_video_editor.py --input ./raw_videos --output ./processed_videos --config config.json
 ```
 
-Semua video di folder `videos_mentah` (mp4/mov/mkv/avi/webm/m4v) diproses otomatis sesuai
-`config.json`, hasilnya masuk ke `videos_hasil`.
+All videos in the `raw_videos` folder (mp4/mov/mkv/avi/webm/m4v) are processed automatically
+according to `config.json`, with results saved to `processed_videos`.
 
 ---
 
-## Struktur project
+## Project Structure
 
 ```
-core/editor.py       - logika edit video (potong sepi, subtitle, watermark, dll)
-core/ai_helper.py     - fitur AI (judul/caption, pemilihan highlight) via OpenAI-compatible API
-web/main.py           - backend web app (FastAPI)
-web/static/index.html - halaman upload
-auto_video_editor.py  - CLI / batch mode
-Dockerfile, docker-compose.yml - jalankan sebagai web app
+core/editor.py        - video editing logic (silence removal, subtitle, watermark, etc.)
+core/ai_helper.py      - AI features (title/caption, highlight selection) via OpenAI-compatible API
+web/main.py            - web app backend (FastAPI)
+web/static/index.html  - upload page
+auto_video_editor.py   - CLI / batch mode
+Dockerfile, docker-compose.yml - run as a web app
 ```
 
-## Catatan
+## Notes
 
-- Proses subtitle (speech-to-text) butuh waktu tergantung `model_size` dan panjang video —
-  `small` biasanya cukup akurat dan tidak terlalu lambat untuk CPU biasa.
-- Job di web app disimpan di memory (cukup untuk pemakaian sendiri/tim kecil). Kalau nanti
-  butuh multi-user dengan banyak proses paralel/antrian, bisa dikembangkan pakai queue
-  (Redis/Celery) — bilang saja kalau itu dibutuhkan.
+- Subtitle processing (speech-to-text) takes time depending on `model_size` and video length —
+  `small` is usually accurate enough and not too slow on a typical CPU.
+- Web app jobs are stored in memory (sufficient for personal/small-team use). If you later
+  need multi-user support with many parallel/queued jobs, this can be extended with a queue
+  system (Redis/Celery) — just ask if that's needed.
