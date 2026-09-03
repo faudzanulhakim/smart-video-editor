@@ -82,7 +82,7 @@ Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no
 
 ```bash
 git clone <this-repo-url>
-cd transcribe-editor-vidio
+cd smart-video-editor
 ```
 
 ### 2\. Create the `.env` file
@@ -199,13 +199,26 @@ according to `config.json`, with results saved to `processed_videos`.
 ## Project Structure
 
 ```
-core/editor.py        - video editing logic (silence removal, subtitle, watermark, etc.)
-core/ai_helper.py      - AI features (title/caption, highlight selection) via OpenAI-compatible API
-web/main.py            - web app backend (FastAPI)
-web/static/index.html  - upload page
-auto_video_editor.py   - CLI / batch mode
-Dockerfile, docker-compose.yml - run as a web app
+smart-video-editor/
+├── auto_video_editor.py   - CLI / batch mode entry point
+├── config.json            - CLI batch-mode editing rules
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── .env.example           - copy to .env and fill in your AI provider config
+├── core/
+│   ├── editor.py           - video editing logic (silence removal, subtitle, watermark, audio extraction, etc.)
+│   └── ai_helper.py         - AI features (title/caption, highlight selection) via OpenAI-compatible API
+├── web/
+│   ├── main.py              - web app backend (FastAPI)
+│   └── static/
+│       └── index.html        - upload page
+└── docs/
+    └── pictures/             - screenshots used in this README
 ```
+
+> `uploads/` and `outputs/` are created automatically at runtime (mounted as Docker volumes)
+> and are not part of the repo — they hold in-progress and processed video files.
 
 ## Notes
 
