@@ -128,11 +128,11 @@ def run_job(job_id, video_path, config):
 
         if config["ai_title_caption"] and segments:
             job["step"] = "AI generating title & caption"
-            result["title_caption"] = ai_helper.suggest_title_caption(segments)
+            result["title_caption"] = ai_helper.suggest_title_caption(segments, language=lang)
 
         if config["ai_highlights"] and segments:
             job["step"] = "AI selecting highlight segments"
-            ranges = ai_helper.suggest_highlights(segments)
+            ranges = ai_helper.suggest_highlights(segments, language=lang)
             if ranges:
                 highlight_path = out_dir / "highlight.mp4"
                 editor.cut_highlights(final_path, ranges, highlight_path)

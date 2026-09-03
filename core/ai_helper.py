@@ -111,13 +111,43 @@ def _salvage_title_caption(text):
     }
 
 
-def suggest_title_caption(segments, platform="general"):
-    """Return dict: {title, caption, hashtags: [...]}"""
+LANGUAGE_NAMES = {"id": "Indonesian", "en": "English"}
+
+# When using a router like OpenRouter's "openrouter/free" (AI_MODEL=openrouter/free),
+# each request may land on a different underlying free model chosen at random.
+# Occasionally that means landing on a model unsuited for this task (a coding-only
+# model, a safety/moderation classifier, etc.), which returns garbage instead of
+# the requested JSON. Retrying re-rolls the router's model choice, so a few retries
+# meaningfully increase the odds of getting a usable response without having to
+# pin to one specific model (which would trade away the router's pooled rate limit).
+MAX_AI_RETRIES = 3
+
+
+def _looks_like_valid_response(parsed):
+    """Loose sanity check that the parsed JSON actually looks like what we asked
+    for, not just valid JSON that happens to be something unrelated (e.g. a
+    moderation classifier replying {"safe": true})."""
+    if isinstance(parsed, dict):
+        return "title" in parsed or "caption" in parsed
+    if isinstance(parsed, list):
+        return True  # empty list is a valid (if unlikely) highlight result
+    return False
+
+
+def suggest_title_caption(segments, platform="general", language="id"):
+    """Return dict: {title, caption, hashtags: [...]}
+
+    `language` controls the language of the generated title/caption/hashtags
+    ("id" or "en") -- this should match the subtitle language chosen by the
+    user, NOT necessarily the language of the prompt/code itself.
+    """
     api_key, base_url, model = _get_config()
     client = _client(base_url, api_key)
     transcript = _segments_to_text(segments, with_timestamps=False)
     if not transcript.strip():
         return {"title": "", "caption": "", "hashtags": []}
+
+    lang_name = LANGUAGE_NAMES.get(language, "Indonesian")
 
     prompt = f"""Here is the transcript of a video:
 
@@ -128,38 +158,62 @@ Create the following for the {platform} platform:
 2. A short caption for the post (2-3 sentences)
 3. 5 relevant hashtags
 
+Write the title, caption, and hashtags in {lang_name}, regardless of what
+language the transcript above is in.
+
 Reply ONLY in the following JSON format, with no other text:
 {{"title": "...", "caption": "...", "hashtags": ["...", "..."]}}"""
 
-    resp = client.chat.completions.create(
-        model=model,
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}],
-        **_extra_kwargs_for_model(model),
-    )
-    text = _strip_json_fences(_extract_text(resp))
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        if _was_truncated(resp):
-            print(
-                "  [ai_helper] AI response was truncated (provider/model token limit). "
-                "Attempting to salvage a partial result...",
-                flush=True,
-            )
-        return _salvage_title_caption(text)
+    last_text = ""
+    last_resp = None
+    for attempt in range(1, MAX_AI_RETRIES + 1):
+        resp = client.chat.completions.create(
+            model=model,
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}],
+            **_extra_kwargs_for_model(model),
+        )
+        text = _strip_json_fences(_extract_text(resp))
+        last_text, last_resp = text, resp
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            parsed = None
+
+        if parsed is not None and _looks_like_valid_response(parsed):
+            return parsed
+
+        print(
+            f"  [ai_helper] Attempt {attempt}/{MAX_AI_RETRIES} returned an unusable "
+            f"response (likely a mismatched model from the router): {text[:120]!r} "
+            f"{'-- retrying with a new model...' if attempt < MAX_AI_RETRIES else '-- giving up.'}",
+            flush=True,
+        )
+
+    if _was_truncated(last_resp):
+        print(
+            "  [ai_helper] AI response was truncated (provider/model token limit). "
+            "Attempting to salvage a partial result...",
+            flush=True,
+        )
+    return _salvage_title_caption(last_text)
 
 
-def suggest_highlights(segments, max_highlights=3, target_total_sec=45):
+def suggest_highlights(segments, max_highlights=3, target_total_sec=45, language="id"):
     """
     Return list of {start, end, reason} - the most interesting parts to use
     for a highlight reel, sorted by their time of appearance.
+
+    `language` controls the language of the "reason" text ("id" or "en") --
+    this should match the subtitle language chosen by the user.
     """
     api_key, base_url, model = _get_config()
     client = _client(base_url, api_key)
     transcript = _segments_to_text(segments, with_timestamps=True)
     if not transcript.strip():
         return []
+
+    lang_name = LANGUAGE_NAMES.get(language, "Indonesian")
 
     prompt = f"""Here is the full video transcript with timestamps (seconds):
 
@@ -169,38 +223,56 @@ Pick at most {max_highlights} of the most interesting/important parts to use for
 highlight video, with a total highlight duration of around {target_total_sec} seconds. Only
 use timestamps that actually appear in the transcript above.
 
+Write the "reason" field in {lang_name}, regardless of what language the
+transcript above is in.
+
 Reply ONLY in the following JSON array format, with no other text:
 [{{"start": 12.5, "end": 20.0, "reason": "..."}}, ...]"""
 
-    resp = client.chat.completions.create(
-        model=model,
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}],
-        **_extra_kwargs_for_model(model),
-    )
-    text = _strip_json_fences(_extract_text(resp))
-    try:
-        ranges = json.loads(text)
-        ranges.sort(key=lambda r: r["start"])
-        return ranges
-    except (json.JSONDecodeError, KeyError, TypeError):
-        if _was_truncated(resp):
-            print(
-                "  [ai_helper] AI response (highlights) was truncated (provider/model "
-                "token limit). Attempting to salvage the objects that are already complete...",
-                flush=True,
-            )
-        # Salvage any complete {start,end,reason} objects that came before the cutoff
-        import re
-        salvaged = []
-        for m in re.finditer(
-            r'\{\s*"start"\s*:\s*([\d.]+)\s*,\s*"end"\s*:\s*([\d.]+)\s*,\s*"reason"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}',
-            text,
-        ):
-            salvaged.append({
-                "start": float(m.group(1)),
-                "end": float(m.group(2)),
-                "reason": m.group(3),
-            })
-        salvaged.sort(key=lambda r: r["start"])
-        return salvaged
+    last_text = ""
+    last_resp = None
+    for attempt in range(1, MAX_AI_RETRIES + 1):
+        resp = client.chat.completions.create(
+            model=model,
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}],
+            **_extra_kwargs_for_model(model),
+        )
+        text = _strip_json_fences(_extract_text(resp))
+        last_text, last_resp = text, resp
+        try:
+            parsed = json.loads(text)
+            parsed.sort(key=lambda r: r["start"])
+        except (json.JSONDecodeError, KeyError, TypeError):
+            parsed = None
+
+        if parsed is not None and _looks_like_valid_response(parsed):
+            return parsed
+
+        print(
+            f"  [ai_helper] Attempt {attempt}/{MAX_AI_RETRIES} returned an unusable "
+            f"response (likely a mismatched model from the router): {text[:120]!r} "
+            f"{'-- retrying with a new model...' if attempt < MAX_AI_RETRIES else '-- giving up.'}",
+            flush=True,
+        )
+
+    if _was_truncated(last_resp):
+        print(
+            "  [ai_helper] AI response (highlights) was truncated (provider/model "
+            "token limit). Attempting to salvage the objects that are already complete...",
+            flush=True,
+        )
+    # Salvage any complete {start,end,reason} objects that came before the cutoff
+    import re
+    salvaged = []
+    for m in re.finditer(
+        r'\{\s*"start"\s*:\s*([\d.]+)\s*,\s*"end"\s*:\s*([\d.]+)\s*,\s*"reason"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}',
+        last_text,
+    ):
+        salvaged.append({
+            "start": float(m.group(1)),
+            "end": float(m.group(2)),
+            "reason": m.group(3),
+        })
+    salvaged.sort(key=lambda r: r["start"])
+    return salvaged
