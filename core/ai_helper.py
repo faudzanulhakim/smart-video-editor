@@ -1,20 +1,21 @@
 """
-Bantuan AI, pakai standar OpenAI-compatible chat completions API -- TIDAK
-terikat/default ke provider mana pun. Semua provider yang kompatibel format
-OpenAI bisa dipakai (Cerebras, Groq, OpenRouter, Together.ai, dll) hanya
-dengan mengatur 3 env var di bawah -- tidak ada provider bawaan di kode ini,
-jadi ganti provider = ganti env var, tanpa sentuh kode sama sekali:
+AI helper, using the standard OpenAI-compatible chat completions API -- NOT
+tied/defaulted to any specific provider. Any provider compatible with the
+OpenAI format can be used (Cerebras, Groq, OpenRouter, Together.ai, etc.)
+just by setting the 3 env vars below -- there's no built-in provider in
+this code, so switching providers = switching env vars, no code changes
+needed:
 
-- suggest_title_caption : buat judul, caption, dan hashtag dari transkrip
-- suggest_highlights    : pilih bagian paling menarik dari transkrip untuk dijadikan highlight reel
+- suggest_title_caption : generate a title, caption, and hashtags from the transcript
+- suggest_highlights    : pick the most interesting parts of the transcript for a highlight reel
 
-Env var yang WAJIB diisi (tidak ada default -- kalau kosong akan error jelas):
-- AI_API_KEY   -- API key dari provider yang kamu pakai
-- AI_BASE_URL  -- endpoint API provider (harus OpenAI-compatible)
-- AI_MODEL     -- nama/slug model di provider tsb
+Env vars that are REQUIRED (no defaults -- if empty, a clear error is raised):
+- AI_API_KEY   -- API key from the provider you're using
+- AI_BASE_URL  -- the provider's API endpoint (must be OpenAI-compatible)
+- AI_MODEL     -- the model name/slug at that provider
 
-Contoh kombinasi yang OpenAI-compatible (tinggal isi 3 env var sesuai provider
-yang kamu mau pakai saat itu):
+Example OpenAI-compatible combinations (just fill in the 3 env vars for
+whichever provider you want to use at the time):
 - Cerebras   : AI_BASE_URL=https://api.cerebras.ai/v1        (cloud.cerebras.ai)
 - Groq       : AI_BASE_URL=https://api.groq.com/openai/v1    (console.groq.com)
 - OpenRouter : AI_BASE_URL=https://openrouter.ai/api/v1      (openrouter.ai)
@@ -24,11 +25,12 @@ yang kamu mau pakai saat itu):
 import json
 import os
 
-# Beberapa model (mis. gpt-oss, zai-glm) adalah "reasoning model" -- mereka
-# "mikir" dulu (chain-of-thought) sebelum kasih jawaban final, dan itu makan
-# token. Kalau max_tokens kehabisan saat masih di tahap mikir, yang balik cuma
-# potongan reasoning-nya (bukan jawaban) -- makanya perlu reasoning_effort
-# rendah (ringkas mikirnya) + max_tokens dilonggarkan sebagai jaring pengaman.
+# Some models (e.g. gpt-oss, zai-glm) are "reasoning models" -- they "think"
+# first (chain-of-thought) before giving a final answer, and that consumes
+# tokens. If max_tokens runs out while still in the thinking stage, what
+# comes back is just a fragment of the reasoning (not the answer) -- hence
+# the need for a low reasoning_effort (keep the thinking brief) + a looser
+# max_tokens as a safety net.
 REASONING_MODEL_KEYWORDS = ("gpt-oss", "glm", "qwen3", "qwen-3", "deepseek-r1")
 
 
@@ -39,8 +41,8 @@ def _extra_kwargs_for_model(model_name):
 
 
 def _get_config():
-    """Baca konfigurasi provider AI dari env var. Tidak ada default/provider
-    bawaan -- semua wajib diisi lewat .env / docker-compose environment."""
+    """Read the AI provider config from env vars. No default/built-in
+    provider -- everything must be set via .env / docker-compose environment."""
     api_key = os.environ.get("AI_API_KEY")
     base_url = os.environ.get("AI_BASE_URL")
     model = os.environ.get("AI_MODEL")
@@ -52,11 +54,11 @@ def _get_config():
     ]
     if missing:
         raise RuntimeError(
-            f"Env var {', '.join(missing)} belum diset -- fitur AI butuh "
-            "ketiganya diisi (AI_API_KEY, AI_BASE_URL, AI_MODEL) sesuai "
-            "provider AI yang mau kamu pakai. Tidak ada provider default; "
-            "cek komentar di atas core/ai_helper.py untuk contoh beberapa "
-            "provider yang kompatibel."
+            f"Env var(s) {', '.join(missing)} not set -- the AI features "
+            "require all three (AI_API_KEY, AI_BASE_URL, AI_MODEL) to be "
+            "set for whichever AI provider you want to use. There is no "
+            "default provider; see the comments at the top of "
+            "core/ai_helper.py for examples of compatible providers."
         )
     return api_key, base_url, model
 
@@ -93,9 +95,9 @@ def _strip_json_fences(text):
 
 def _salvage_title_caption(text):
     """
-    Kalau JSON kepotong (mis. karena provider gratis motong output di tengah
-    jalan), coba ekstrak title/caption/hashtags yang SUDAH lengkap lewat
-    regex, daripada balikin kosong total.
+    If the JSON got cut off (e.g. because a free provider truncated the
+    output midway), try to extract whatever title/caption/hashtags are
+    already complete via regex, instead of returning nothing at all.
     """
     import re
     title = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
@@ -117,16 +119,16 @@ def suggest_title_caption(segments, platform="general"):
     if not transcript.strip():
         return {"title": "", "caption": "", "hashtags": []}
 
-    prompt = f"""Berikut transkrip sebuah video:
+    prompt = f"""Here is the transcript of a video:
 
 {transcript}
 
-Buatkan untuk platform {platform}:
-1. Judul video yang menarik (maks 10 kata)
-2. Caption singkat untuk posting (2-3 kalimat)
-3. 5 hashtag relevan
+Create the following for the {platform} platform:
+1. An engaging video title (max 10 words)
+2. A short caption for the post (2-3 sentences)
+3. 5 relevant hashtags
 
-Jawab HANYA dalam format JSON seperti ini, tanpa teks lain:
+Reply ONLY in the following JSON format, with no other text:
 {{"title": "...", "caption": "...", "hashtags": ["...", "..."]}}"""
 
     resp = client.chat.completions.create(
@@ -141,8 +143,8 @@ Jawab HANYA dalam format JSON seperti ini, tanpa teks lain:
     except json.JSONDecodeError:
         if _was_truncated(resp):
             print(
-                "  [ai_helper] Respons AI kepotong (limit token provider/model). "
-                "Mencoba selamatkan sebagian hasil...",
+                "  [ai_helper] AI response was truncated (provider/model token limit). "
+                "Attempting to salvage a partial result...",
                 flush=True,
             )
         return _salvage_title_caption(text)
@@ -150,8 +152,8 @@ Jawab HANYA dalam format JSON seperti ini, tanpa teks lain:
 
 def suggest_highlights(segments, max_highlights=3, target_total_sec=45):
     """
-    Return list of {start, end, reason} - bagian paling menarik untuk highlight reel,
-    diurutkan berdasarkan waktu kemunculan.
+    Return list of {start, end, reason} - the most interesting parts to use
+    for a highlight reel, sorted by their time of appearance.
     """
     api_key, base_url, model = _get_config()
     client = _client(base_url, api_key)
@@ -159,15 +161,15 @@ def suggest_highlights(segments, max_highlights=3, target_total_sec=45):
     if not transcript.strip():
         return []
 
-    prompt = f"""Berikut transkrip video lengkap dengan timestamp (detik):
+    prompt = f"""Here is the full video transcript with timestamps (seconds):
 
 {transcript}
 
-Pilih maksimal {max_highlights} bagian paling menarik/penting untuk dijadikan video highlight
-singkat, total durasi highlight sekitar {target_total_sec} detik. Gunakan timestamp yang
-benar-benar ada di transkrip di atas.
+Pick at most {max_highlights} of the most interesting/important parts to use for a short
+highlight video, with a total highlight duration of around {target_total_sec} seconds. Only
+use timestamps that actually appear in the transcript above.
 
-Jawab HANYA dalam format JSON array seperti ini, tanpa teks lain:
+Reply ONLY in the following JSON array format, with no other text:
 [{{"start": 12.5, "end": 20.0, "reason": "..."}}, ...]"""
 
     resp = client.chat.completions.create(
@@ -184,11 +186,11 @@ Jawab HANYA dalam format JSON array seperti ini, tanpa teks lain:
     except (json.JSONDecodeError, KeyError, TypeError):
         if _was_truncated(resp):
             print(
-                "  [ai_helper] Respons AI (highlights) kepotong (limit token "
-                "provider/model). Mencoba selamatkan objek yang sudah lengkap...",
+                "  [ai_helper] AI response (highlights) was truncated (provider/model "
+                "token limit). Attempting to salvage the objects that are already complete...",
                 flush=True,
             )
-        # Selamatkan objek {start,end,reason} yang sudah utuh sebelum titik potong
+        # Salvage any complete {start,end,reason} objects that came before the cutoff
         import re
         salvaged = []
         for m in re.finditer(

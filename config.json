@@ -10,8 +10,8 @@
     "model_size": "medium",
     "language": "id",
     "output_language": "id",
-    "_comment_model_size": "tiny/base/small = lebih cepat, kurang akurat. medium = seimbang (default). large-v3 = paling akurat, paling berat di CPU.",
-    "_comment_language": "language = bahasa SUMBER audio video (dipakai sebagai hint, default 'id'). output_language = bahasa teks subtitle hasil: 'id' (transkrip apa adanya) atau 'en' (diterjemahkan Whisper ke Inggris, tidak butuh AI_API_KEY).",
+    "_comment_model_size": "tiny/base/small = faster, less accurate. medium = balanced (default). large-v3 = most accurate, heaviest on CPU.",
+    "_comment_language": "language = SOURCE audio language of the video (used as a hint, default 'id'). output_language = language of the resulting subtitle text: 'id' (transcript as-is) or 'en' (translated by Whisper to English, no AI_API_KEY needed).",
     "style": {
       "font_name": "Roboto",
       "font_size": 16,
@@ -22,7 +22,7 @@
       "shadow": 0.6,
       "alignment": 2,
       "margin_v": 40,
-      "_comment": "primary_color/outline_color pakai format ASS &HAABBGGRR (bukan RGB biasa). alignment: 2=tengah bawah, 8=tengah atas."
+      "_comment": "primary_color/outline_color use the ASS format &HAABBGGRR (not plain RGB). alignment: 2=bottom center, 8=top center."
     }
   },
   "intro_outro": {
@@ -40,6 +40,6 @@
   "extract_audio": {
     "enabled": false,
     "format": "mp3",
-    "_comment": "format bisa: mp3, m4a/aac, atau wav (lossless, file lebih besar)"
+    "_comment": "format can be: mp3, m4a/aac, or wav (lossless, larger file)"
   }
 }

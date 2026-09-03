@@ -1,6 +1,6 @@
 """
-Web app Auto Video Editor.
-Jalankan: uvicorn web.main:app --host 0.0.0.0 --port 8000
+Auto Video Editor web app.
+Run with: uvicorn web.main:app --host 0.0.0.0 --port 8000
 """
 
 import shutil
@@ -26,7 +26,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 app = FastAPI(title="Auto Video Editor")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
-# Job status disimpan in-memory (cukup untuk single-instance / MVP)
+# Job status is stored in-memory (sufficient for single-instance / MVP)
 JOBS = {}
 
 
@@ -62,7 +62,7 @@ def upload(
 
     config = {
         "remove_silence": remove_silence,
-        "subtitle": subtitle or ai_title_caption or ai_highlights,  # butuh transkrip
+        "subtitle": subtitle or ai_title_caption or ai_highlights,  # needs a transcript
         "subtitle_lang": subtitle_lang if subtitle_lang in ("id", "en") else "id",
         "ai_title_caption": ai_title_caption,
         "ai_highlights": ai_highlights,
@@ -85,39 +85,39 @@ def run_job(job_id, video_path, config):
     try:
         job["status"] = "processing"
 
-        job["step"] = "Memeriksa & memperbaiki file video"
+        job["step"] = "Checking & fixing the video file"
         video_path = editor.ensure_playable(video_path)
 
         if config["remove_silence"]:
-            job["step"] = "Mendeteksi bagian sepi"
+            job["step"] = "Detecting silent segments"
             silences = editor.detect_silence_ranges(video_path)
-            job["step"] = "Memotong bagian sepi"
+            job["step"] = "Removing silent segments"
             trimmed_path = out_dir / "silence_removed.mp4"
             video_path = editor.remove_silence(video_path, silences, trimmed_path)
 
         pre_path = out_dir / "pre_processed.mp4"
         if config["watermark_path"]:
-            job["step"] = "Menambahkan watermark"
+            job["step"] = "Adding watermark"
             editor.add_watermark(video_path, config["watermark_path"], pre_path)
         else:
-            job["step"] = "Menyimpan video"
+            job["step"] = "Saving video"
             shutil.copy(video_path, pre_path)
 
         segments = []
         if config["subtitle"]:
-            job["step"] = "Membuat transkrip (speech-to-text)"
+            job["step"] = "Generating transcript (speech-to-text)"
             lang = config.get("subtitle_lang", "id")
             task = "translate" if lang == "en" else "transcribe"
-            # language="id" dipakai sebagai hint bahasa SUMBER audio (video
-            # aslinya diasumsikan Bahasa Indonesia) -- baik untuk task
-            # "transcribe" (hasil teks ID) maupun "translate" (Whisper tetap
-            # butuh tahu bahasa sumber, tapi outputnya selalu diterjemahkan
-            # ke Inggris).
+            # language="id" is used as a hint for the SOURCE audio language
+            # (the original video is assumed to be Indonesian) -- useful for
+            # both the "transcribe" task (ID text output) and the
+            # "translate" task (Whisper still needs to know the source
+            # language, but the output is always translated to English).
             segments = editor.transcribe(pre_path, language="id", task=task)
 
         final_path = out_dir / "final.mp4"
         if config["subtitle"] and segments:
-            job["step"] = "Menambahkan subtitle"
+            job["step"] = "Adding subtitles"
             srt_path = out_dir / "subtitle.srt"
             editor.write_srt(segments, srt_path)
             editor.burn_subtitle(pre_path, srt_path, final_path)
@@ -127,11 +127,11 @@ def run_job(job_id, video_path, config):
         result = {"final_video": f"/download/{job_id}/final.mp4"}
 
         if config["ai_title_caption"] and segments:
-            job["step"] = "AI membuat judul & caption"
+            job["step"] = "AI generating title & caption"
             result["title_caption"] = ai_helper.suggest_title_caption(segments)
 
         if config["ai_highlights"] and segments:
-            job["step"] = "AI memilih bagian highlight"
+            job["step"] = "AI selecting highlight segments"
             ranges = ai_helper.suggest_highlights(segments)
             if ranges:
                 highlight_path = out_dir / "highlight.mp4"
@@ -140,18 +140,18 @@ def run_job(job_id, video_path, config):
                 result["highlight_reasons"] = ranges
 
         if config["extract_audio"]:
-            job["step"] = "Mengekstrak audio dari video"
+            job["step"] = "Extracting audio from video"
             audio_path = out_dir / "audio.mp3"
             editor.extract_audio(final_path, audio_path, audio_format="mp3")
             result["audio"] = f"/download/{job_id}/audio.mp3"
 
         job["result"] = result
         job["status"] = "done"
-        job["step"] = "Selesai"
+        job["step"] = "Done"
 
     except Exception as e:
         tb = traceback.format_exc()
-        print(f"[job {job_id}] GAGAL di step '{job['step']}':\n{tb}", flush=True)
+        print(f"[job {job_id}] FAILED at step '{job['step']}':\n{tb}", flush=True)
         job["status"] = "error"
         job["error"] = f"{e} (step: {job['step']})"
 
@@ -160,7 +160,7 @@ def run_job(job_id, video_path, config):
 def status(job_id: str):
     job = JOBS.get(job_id)
     if not job:
-        return JSONResponse({"error": "job tidak ditemukan"}, status_code=404)
+        return JSONResponse({"error": "job not found"}, status_code=404)
     return job
 
 
@@ -168,5 +168,5 @@ def status(job_id: str):
 def download(job_id: str, filename: str):
     path = OUTPUT_DIR / job_id / filename
     if not path.exists():
-        return JSONResponse({"error": "file tidak ditemukan"}, status_code=404)
+        return JSONResponse({"error": "file not found"}, status_code=404)
     return FileResponse(str(path), filename=filename)

@@ -2,10 +2,10 @@
 """
 Auto Video Editor - CLI / Batch mode
 ======================================
-Untuk web app dengan UI upload + fitur AI, jalankan lewat Docker (lihat README.md).
+For the web app with an upload UI + AI features, run it via Docker (see README.md).
 
-Cara pakai CLI:
-    python auto_video_editor.py --input ./videos_mentah --output ./videos_hasil --config config.json
+CLI usage:
+    python auto_video_editor.py --input ./raw_videos --output ./processed_videos --config config.json
 """
 
 import argparse
@@ -34,15 +34,15 @@ def process_video(input_path, output_dir, config):
     output_dir.mkdir(parents=True, exist_ok=True)
     tmp_dir = output_dir / "_tmp"
     tmp_dir.mkdir(exist_ok=True)
-    orig_stem = input_path.stem  # dipakai buat nama file final, terlepas dari tahapan apapun
+    orig_stem = input_path.stem  # used for the final filename, regardless of any stage
 
-    print(f"\n=== Memproses: {input_path.name} ===")
+    print(f"\n=== Processing: {input_path.name} ===")
 
-    print("  - Memeriksa & memperbaiki metadata video (jika perlu)...")
+    print("  - Checking & fixing video metadata (if needed)...")
     input_path = ensure_playable(input_path)
 
     if config.get("remove_silence", {}).get("enabled", False):
-        print("  - Mendeteksi & memotong bagian sepi...")
+        print("  - Detecting & removing silent segments...")
         sc = config["remove_silence"]
         silences = detect_silence_ranges(
             input_path,
@@ -60,7 +60,7 @@ def process_video(input_path, output_dir, config):
     pre_wm_path = tmp_dir / f"{input_path.stem}_pre_wm.mp4"
 
     if io_cfg.get("enabled", False):
-        print("  - Menambahkan intro/outro...")
+        print("  - Adding intro/outro...")
         clip = VideoFileClip(str(input_path))
         clip = add_intro_outro(clip, io_cfg.get("intro_path"), io_cfg.get("outro_path"))
         clip.write_videofile(
@@ -72,7 +72,7 @@ def process_video(input_path, output_dir, config):
 
     pre_sub_path = tmp_dir / f"{input_path.stem}_pre_sub.mp4"
     if wm_cfg.get("enabled", False):
-        print("  - Menambahkan watermark...")
+        print("  - Adding watermark...")
         input_path = add_watermark(
             input_path,
             wm_cfg.get("image_path"),
@@ -90,7 +90,7 @@ def process_video(input_path, output_dir, config):
 
     sub_cfg = config.get("subtitle", {})
     if sub_cfg.get("enabled", False):
-        print("  - Membuat subtitle otomatis (speech-to-text)...")
+        print("  - Generating automatic subtitles (speech-to-text)...")
         lang = sub_cfg.get("output_language", "id")
         task = "translate" if lang == "en" else "transcribe"
         segments = transcribe(
@@ -101,20 +101,20 @@ def process_video(input_path, output_dir, config):
         )
         srt_path = tmp_dir / f"{input_path.stem}.srt"
         write_srt(segments, srt_path)
-        print("  - Burn subtitle ke video...")
+        print("  - Burning subtitles into the video...")
         burn_subtitle(pre_sub_path, srt_path, final_path, style=sub_cfg.get("style"))
     else:
         pre_sub_path.rename(final_path)
 
     audio_cfg = config.get("extract_audio", {})
     if audio_cfg.get("enabled", False):
-        print("  - Mengekstrak audio dari video...")
+        print("  - Extracting audio from video...")
         audio_format = audio_cfg.get("format", "mp3")
         audio_path = output_dir / f"{orig_stem}_audio.{audio_format}"
         extract_audio(final_path, audio_path, audio_format=audio_format)
         print(f"  Audio -> {audio_path}")
 
-    print(f"  Selesai -> {final_path}")
+    print(f"  Done -> {final_path}")
     return final_path
 
 
@@ -122,26 +122,26 @@ def batch_process(input_dir, output_dir, config):
     input_dir = Path(input_dir)
     videos = sorted(p for p in input_dir.iterdir() if p.suffix.lower() in VIDEO_EXTS)
     if not videos:
-        print(f"Tidak ada file video ditemukan di {input_dir}")
+        print(f"No video files found in {input_dir}")
         return
 
-    print(f"Ditemukan {len(videos)} video. Mulai proses batch...")
+    print(f"Found {len(videos)} video(s). Starting batch processing...")
     for v in videos:
         try:
             process_video(v, output_dir, config)
         except Exception as e:
-            print(f"  GAGAL memproses {v.name}: {e}")
+            print(f"  FAILED to process {v.name}: {e}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Auto Video Editor - otomatisasi edit video (CLI)")
-    parser.add_argument("--input", required=True, help="Folder berisi video mentah")
-    parser.add_argument("--output", required=True, help="Folder untuk hasil video")
-    parser.add_argument("--config", default="config.json", help="Path file konfigurasi JSON")
+    parser = argparse.ArgumentParser(description="Auto Video Editor - automated video editing (CLI)")
+    parser.add_argument("--input", required=True, help="Folder containing raw videos")
+    parser.add_argument("--output", required=True, help="Folder for the resulting videos")
+    parser.add_argument("--config", default="config.json", help="Path to the JSON config file")
     args = parser.parse_args()
 
     if not Path(args.config).exists():
-        print(f"File config '{args.config}' tidak ditemukan.")
+        print(f"Config file '{args.config}' not found.")
         sys.exit(1)
 
     with open(args.config, "r", encoding="utf-8") as f:

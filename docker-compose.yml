@@ -4,8 +4,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Wajib diisi di .env -- tidak ada provider default. Isi 3 var ini
-      # sesuai provider AI (OpenAI-compatible) yang mau kamu pakai saat ini.
+      # Must be set in .env -- there is no default provider. Set these 3
+      # vars to match whichever OpenAI-compatible AI provider you want to
+      # use right now.
       - AI_API_KEY=${AI_API_KEY}
       - AI_BASE_URL=${AI_BASE_URL}
       - AI_MODEL=${AI_MODEL}
