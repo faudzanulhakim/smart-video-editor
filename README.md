@@ -35,6 +35,14 @@ ready-to-publish content — clean video with dead air removed, subtitles includ
 title/caption generated automatically, and (optionally) a dubbed version in another language —
 with no manual work from scratch.
 
+## Demo Video
+
+> 🎥 **A 1-minute introduction video is on the way — coming soon.**
+> <!-- Once ready, replace this block with either:
+>      [![Watch the demo](docs/pictures/video-thumbnail.png)](https://youtu.be/YOUR_VIDEO_ID)
+>      or, for a self-hosted clip committed to the repo:
+>      <video src="docs/pictures/intro-video.mp4" controls width="100%"></video> -->
+
 ## Screenshots
 
 <table>
