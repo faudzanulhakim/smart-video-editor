@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from core import editor, ai_helper
+from core import editor, ai_helper, dubbing
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads"
@@ -43,6 +43,8 @@ def upload(
     subtitle_lang: str = Form("id"),
     ai_title_caption: bool = Form(False),
     ai_highlights: bool = Form(False),
+    ai_dubbing: bool = Form(False),
+    dub_lang: str = Form("id"),
     extract_audio: bool = Form(False),
     watermark: UploadFile = File(None),
 ):
@@ -62,10 +64,12 @@ def upload(
 
     config = {
         "remove_silence": remove_silence,
-        "subtitle": subtitle or ai_title_caption or ai_highlights,  # needs a transcript
+        "subtitle": subtitle or ai_title_caption or ai_highlights or ai_dubbing,  # needs a transcript
         "subtitle_lang": subtitle_lang if subtitle_lang in ("id", "en") else "id",
         "ai_title_caption": ai_title_caption,
         "ai_highlights": ai_highlights,
+        "ai_dubbing": ai_dubbing,
+        "dub_lang": dub_lang if dub_lang in ("id", "en") else "id",
         "extract_audio": extract_audio,
         "watermark_path": str(watermark_path) if watermark_path else None,
     }
@@ -144,6 +148,52 @@ def run_job(job_id, video_path, config):
             audio_path = out_dir / "audio.mp3"
             editor.extract_audio(final_path, audio_path, audio_format="mp3")
             result["audio"] = f"/download/{job_id}/audio.mp3"
+
+        if config["ai_dubbing"] and segments:
+            dub_lang = config.get("dub_lang", "id")
+
+            # IMPORTANT: reuse the exact same `segments` (and `lang`) that
+            # were already used to burn the visible subtitle above, instead
+            # of re-transcribing the video from scratch. A separate
+            # transcription pass can land on slightly different segment
+            # boundaries/wording than the subtitle, so the spoken dub would
+            # drift from what's shown on screen even in the same language.
+            if dub_lang == lang:
+                # Same language as the subtitle -- use its text verbatim,
+                # no extra translation call needed, so dubbed speech and
+                # burned-in subtitle say exactly the same thing.
+                dub_segments = segments
+            else:
+                # Different language than the subtitle -- translate FROM
+                # the subtitle's own text (not a fresh transcript), so the
+                # dub still matches the same content/segment timing as
+                # what's on screen.
+                job["step"] = "AI translating script for dubbing"
+                dub_segments = dubbing.translate_segments(segments, target_language=dub_lang)
+
+            job["step"] = "Estimating speaker gender per segment"
+            genders = dubbing.detect_segment_genders(pre_path, segments)
+
+            job["step"] = "Generating dubbed voice (TTS)"
+            dub_tmp_dir = out_dir / "dub_tmp"
+            tts_paths = dubbing.synthesize_segment_audio(
+                dub_segments, dub_tmp_dir / "tts", target_language=dub_lang, genders=genders
+            )
+
+            job["step"] = "Building the dubbed audio track"
+            total_duration = editor._probe_duration(final_path) or (
+                dub_segments[-1]["end"] if dub_segments else 0
+            )
+            dubbed_track_path = out_dir / "dubbed_track.mp3"
+            dubbing.build_dubbed_track(
+                dub_segments, tts_paths, total_duration, dub_tmp_dir, dubbed_track_path
+            )
+
+            job["step"] = "Muxing dubbed audio onto video"
+            dubbed_video_path = out_dir / "dubbed.mp4"
+            dubbing.mux_dubbed_audio(final_path, dubbed_track_path, dubbed_video_path)
+            result["dubbed_video"] = f"/download/{job_id}/dubbed.mp4"
+            result["dubbed_lang"] = dub_lang
 
         job["result"] = result
         job["status"] = "done"

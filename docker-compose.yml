@@ -1,6 +1,8 @@
 services:
-  auto-video-editor:
+  smart-video-editor:
     build: .
+    image: smart-video-editor
+    container_name: smart-video-editor
     ports:
       - "8000:8000"
     environment:

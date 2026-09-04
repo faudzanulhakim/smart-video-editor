@@ -183,9 +183,21 @@
     display:flex; align-items:center; gap:12px;
     padding:14px 2px;
     border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
   }
   .row:last-child{ border-bottom:none; }
-  .row label.main{ font-size:14px; color:var(--ink); cursor:pointer; flex:1; }
+  .row label.main{ font-size:14px; color:var(--ink); cursor:pointer; flex:1 1 auto; min-width:0; }
+  .row .row-controls{ display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto; }
+  .row-hint{
+    flex-basis:100%; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);
+    margin-top:-4px;
+  }
+  .ai-badge{
+    display:inline-flex; align-items:center;
+    font-family:var(--mono); font-size:9.5px; font-weight:600; letter-spacing:.04em;
+    color:var(--accent); border:1px solid var(--accent); border-radius:999px;
+    padding:1px 6px; margin-left:8px; vertical-align:middle;
+  }
 
   .toggle{ position:relative; width:38px; height:22px; flex-shrink:0; }
   .toggle input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; z-index:2; }
@@ -281,6 +293,16 @@
   .result-block p.tags{ font-family:var(--mono); font-size:12px; color:var(--accent); }
   video, audio{ width:100%; border-radius:var(--r-md); display:block; background:#000; }
   audio{ background:transparent; }
+  .video-tabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .video-tab-btn{
+    font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.02em;
+    padding:8px 14px; border-radius:999px; border:1.5px solid var(--ink);
+    background:var(--paper); color:var(--ink); cursor:pointer; transition:all .15s var(--ease);
+  }
+  .video-tab-btn:hover{ background:var(--ink-faint-bg,#f2f2f2); }
+  .video-tab-btn.active{ background:var(--ink); color:var(--paper); }
+  .video-tab-content{ display:none; }
+  .video-tab-content.active{ display:block; animation:fadeIn .25s var(--ease); }
   a.download{
     display:inline-flex; align-items:center; gap:6px; margin-top:14px;
     font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--ink);
@@ -315,7 +337,7 @@
     <div class="hero-top">
       <div class="mark">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        Local Processing · ffmpeg · Whisper
+        Local Processing · Private &amp; Secure
       </div>
       <div class="live-pill" id="livePill">
         <div class="eq"><span></span><span></span><span></span><span></span><span></span></div>
@@ -323,7 +345,7 @@
       </div>
     </div>
     <h1>Auto Video Editor</h1>
-    <p>Upload your video, select the features you need, and the system will process it automatically — silent segments removed, subtitles generated, and title and caption prepared automatically.</p>
+    <p>Upload your video, select the features you need, and the system will process it automatically — silent segments removed, subtitles generated, audio extracted, and an AI-generated title, caption, highlight reel, or translated voice dub prepared, all in one pass.</p>
   </div>
 
   <form id="uploadForm">
@@ -348,19 +370,25 @@
       <div class="module-body">
         <div class="row">
           <label class="main" for="removeSilence">Auto remove silence</label>
-          <span class="toggle"><input type="checkbox" id="removeSilence" checked><span class="track"></span><span class="thumb"></span></span>
+          <div class="row-controls">
+            <span class="toggle"><input type="checkbox" id="removeSilence" checked><span class="track"></span><span class="thumb"></span></span>
+          </div>
         </div>
         <div class="row">
           <label class="main" for="subtitle">Auto subtitle</label>
-          <div class="pillgroup" id="langPill">
-            <button type="button" data-lang="id" class="active">ID</button>
-            <button type="button" data-lang="en">EN</button>
+          <div class="row-controls">
+            <div class="pillgroup" id="langPill">
+              <button type="button" data-lang="id" class="active">ID</button>
+              <button type="button" data-lang="en">EN</button>
+            </div>
+            <span class="toggle"><input type="checkbox" id="subtitle" checked><span class="track"></span><span class="thumb"></span></span>
           </div>
-          <span class="toggle"><input type="checkbox" id="subtitle" checked><span class="track"></span><span class="thumb"></span></span>
         </div>
         <div class="row">
           <label class="main" for="extractAudio">Extract audio (MP3)</label>
-          <span class="toggle"><input type="checkbox" id="extractAudio"><span class="track"></span><span class="thumb"></span></span>
+          <div class="row-controls">
+            <span class="toggle"><input type="checkbox" id="extractAudio"><span class="track"></span><span class="thumb"></span></span>
+          </div>
         </div>
         <div class="row-file">
           <label class="main">Watermark (optional)</label>
@@ -374,12 +402,27 @@
       <div class="module-head"><span class="ghost-num">03</span><span class="module-title">AI Features</span></div>
       <div class="module-body">
         <div class="row">
-          <label class="main" for="aiTitleCaption">AI title & caption</label>
-          <span class="toggle"><input type="checkbox" id="aiTitleCaption" checked><span class="track"></span><span class="thumb"></span></span>
+          <label class="main" for="aiTitleCaption">AI title & caption<span class="ai-badge">AI</span></label>
+          <div class="row-controls">
+            <span class="toggle"><input type="checkbox" id="aiTitleCaption" checked><span class="track"></span><span class="thumb"></span></span>
+          </div>
         </div>
         <div class="row">
-          <label class="main" for="aiHighlights">Auto highlight clips</label>
-          <span class="toggle"><input type="checkbox" id="aiHighlights" checked><span class="track"></span><span class="thumb"></span></span>
+          <label class="main" for="aiHighlights">Auto highlight clips<span class="ai-badge">AI</span></label>
+          <div class="row-controls">
+            <span class="toggle"><input type="checkbox" id="aiHighlights" checked><span class="track"></span><span class="thumb"></span></span>
+          </div>
+        </div>
+        <div class="row">
+          <label class="main" for="aiDubbing">Auto dubbing (translated voice)<span class="ai-badge">AI</span></label>
+          <div class="row-controls">
+            <div class="pillgroup" id="dubLangPill">
+              <button type="button" data-lang="id" class="active">ID</button>
+              <button type="button" data-lang="en">EN</button>
+            </div>
+            <span class="toggle"><input type="checkbox" id="aiDubbing"><span class="track"></span><span class="thumb"></span></span>
+          </div>
+          <div class="row-hint">Transcribes, translates &amp; generates a new voice track — takes longer than other features</div>
         </div>
       </div>
     </div>
@@ -414,6 +457,7 @@ const frameFilename = document.getElementById('frameFilename');
 const wmInput = document.getElementById('watermarkFile');
 const wmName = document.getElementById('wmName');
 const langPill = document.getElementById('langPill');
+const dubLangPill = document.getElementById('dubLangPill');
 
 let subtitleLangValue = 'id';
 langPill.addEventListener('click', (e) => {
@@ -422,6 +466,15 @@ langPill.addEventListener('click', (e) => {
   langPill.querySelectorAll('button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   subtitleLangValue = btn.dataset.lang;
+});
+
+let dubLangValue = 'id';
+dubLangPill.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  dubLangPill.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  dubLangValue = btn.dataset.lang;
 });
 
 let elapsedTimer = null, elapsedStart = null;
@@ -490,6 +543,8 @@ form.addEventListener('submit', async (e) => {
   fd.append('extract_audio', document.getElementById('extractAudio').checked);
   fd.append('ai_title_caption', document.getElementById('aiTitleCaption').checked);
   fd.append('ai_highlights', document.getElementById('aiHighlights').checked);
+  fd.append('ai_dubbing', document.getElementById('aiDubbing').checked);
+  fd.append('dub_lang', dubLangValue);
   const wm = wmInput.files[0];
   if (wm) fd.append('watermark', wm);
 
@@ -537,28 +592,74 @@ function showResult(result) {
       <p class="tags">${(tc.hashtags || []).map(h => '#' + h.replace('#','')).join('  ')}</p></div>`;
   }
 
-  html += `<div class="result-block"><h3>Final Video</h3>
-    <video controls src="${result.final_video}"></video>
-    <a class="download" href="${result.final_video}" download>↓ Download final video</a></div>`;
-
-  if (result.audio) {
-    html += `<div class="result-block"><h3>Audio (MP3)</h3>
-      <audio controls src="${result.audio}"></audio>
-      <a class="download" href="${result.audio}" download>↓ Download audio</a></div>`;
-  }
-
+  // Build the set of video results as tabs (Final / Highlight / Dubbed),
+  // so the user clicks between them instead of scrolling past several
+  // stacked video players.
+  const videoTabs = [];
+  videoTabs.push({
+    key: 'final', label: 'Final Video', src: result.final_video,
+    downloadLabel: 'Download final video',
+  });
   if (result.highlight_video) {
-    html += `<div class="result-block"><h3>Highlight (AI Generated)</h3>
-      <video controls src="${result.highlight_video}"></video>
-      <a class="download" href="${result.highlight_video}" download>↓ Download highlight video</a><br>`;
-    (result.highlight_reasons || []).forEach(r => {
-      html += `<span class="badge">${r.start.toFixed(1)}s–${r.end.toFixed(1)}s · ${r.reason}</span>`;
+    videoTabs.push({
+      key: 'highlight', label: 'Highlight (AI)', src: result.highlight_video,
+      downloadLabel: 'Download highlight video',
+      extra: (result.highlight_reasons || []).map(r =>
+        `<span class="badge">${r.start.toFixed(1)}s–${r.end.toFixed(1)}s · ${r.reason}</span>`
+      ).join(''),
     });
-    html += `</div>`;
   }
+  if (result.dubbed_video) {
+    videoTabs.push({
+      key: 'dubbed', label: `Dubbed Video (${(result.dubbed_lang || '').toUpperCase()})`,
+      src: result.dubbed_video, downloadLabel: 'Download dubbed video',
+    });
+  }
+  if (result.audio) {
+    videoTabs.push({
+      key: 'audio', label: 'Audio (MP3)', src: result.audio,
+      downloadLabel: 'Download audio', mediaTag: 'audio',
+    });
+  }
+
+  html += `<div class="result-block">`;
+  if (videoTabs.length > 1) {
+    html += `<div class="video-tabs">` +
+      videoTabs.map((t, i) =>
+        `<button type="button" class="video-tab-btn${i === 0 ? ' active' : ''}" data-tab="${t.key}">${t.label}</button>`
+      ).join('') +
+      `</div>`;
+  } else {
+    html += `<h3>${videoTabs[0].label}</h3>`;
+  }
+  html += videoTabs.map((t, i) => `
+    <div class="video-tab-content${i === 0 ? ' active' : ''}" data-tab-content="${t.key}">
+      <${t.mediaTag || 'video'} controls src="${t.src}"></${t.mediaTag || 'video'}>
+      <a class="download" href="${t.src}" download>↓ ${t.downloadLabel}</a>
+      ${t.extra ? `<br>${t.extra}` : ''}
+    </div>`).join('');
+  html += `</div>`;
 
   resultDiv.innerHTML = html;
 }
+
+resultDiv.addEventListener('click', (e) => {
+  const btn = e.target.closest('.video-tab-btn');
+  if (!btn) return;
+  const container = btn.closest('.result-block');
+  container.querySelectorAll('.video-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  container.querySelectorAll('.video-tab-content').forEach(c => {
+    const isActive = c.dataset.tabContent === btn.dataset.tab;
+    c.classList.toggle('active', isActive);
+    // pause whatever media gets hidden so it doesn't keep playing off-screen
+    if (!isActive) {
+      const media = c.querySelector('video, audio');
+      if (media) media.pause();
+    }
+  });
+});
+
 </script>
 </body>
 </html>

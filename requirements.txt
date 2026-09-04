@@ -6,3 +6,7 @@ fastapi==0.111.0
 uvicorn[standard]==0.30.1
 python-multipart==0.0.9
 openai
+# used for the AI auto-dubbing feature (core/dubbing.py)
+edge-tts
+librosa      # pitch analysis for male/female voice matching in dubbing
+numpy

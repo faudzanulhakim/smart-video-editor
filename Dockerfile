@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fontconfig \
         fonts-roboto \
         fonts-dejavu-core \
+        libsndfile1 \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
