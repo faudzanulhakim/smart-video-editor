@@ -329,6 +329,143 @@
     .ghost-num{ font-size:56px; }
   }
 </style>
+<style>
+  /* Modern visual layer — keeps the existing form IDs and JavaScript intact. */
+  :root{
+    --bg:#090b12;
+    --paper:rgba(20,24,36,.82);
+    --ink:#f5f7ff;
+    --ink-dim:#a8b0c5;
+    --ink-faint:#6d758b;
+    --line:rgba(255,255,255,.11);
+    --accent:#8b5cf6;
+    --accent-2:#22d3ee;
+    --gold:#fbbf24;
+    --green:#34d399;
+    --r-lg:24px;
+    --r-md:16px;
+  }
+  html{ background:var(--bg); }
+  body{
+    position:relative; overflow-x:hidden; padding:0 18px 80px;
+    background:radial-gradient(circle at 8% 0%,rgba(139,92,246,.22),transparent 34%),
+      radial-gradient(circle at 92% 12%,rgba(34,211,238,.13),transparent 28%),var(--bg);
+  }
+  body:before,body:after{content:"";position:fixed;z-index:-1;border-radius:50%;filter:blur(2px);pointer-events:none}
+  body:before{width:340px;height:340px;left:-180px;bottom:8%;background:rgba(139,92,246,.11)}
+  body:after{width:260px;height:260px;right:-130px;bottom:25%;background:rgba(34,211,238,.08)}
+  .app{max-width:760px;padding-top:22px}
+  .hero{padding:26px 30px 30px;margin-bottom:24px;border:1px solid var(--line);border-radius:28px;
+    background:linear-gradient(135deg,rgba(24,29,45,.92),rgba(13,16,26,.72));box-shadow:0 24px 70px rgba(0,0,0,.28)}
+  .hero-top{margin-bottom:42px}.mark{color:#bdc5da;letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+  .mark svg{color:var(--accent-2)}
+  .live-pill{border-color:var(--line);background:rgba(255,255,255,.04);color:var(--ink-faint)}
+  .live-pill.live{border-color:rgba(52,211,153,.5);color:var(--green);box-shadow:0 0 20px rgba(52,211,153,.12)}
+  h1{font-size:clamp(38px,8vw,68px);letter-spacing:-.055em;line-height:.98;margin-bottom:18px}
+  .hero p{max-width:52ch;color:var(--ink-dim);font-size:16px}
+  .module{margin-bottom:16px;padding:20px;border:1px solid var(--line);border-radius:var(--r-lg);
+    background:var(--paper);backdrop-filter:blur(16px);box-shadow:0 14px 38px rgba(0,0,0,.16)}
+  .module-head{min-height:34px;margin-bottom:16px;align-items:center}.ghost-num{font-size:30px;color:var(--accent);opacity:.8;line-height:1}
+  .module-title{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#dce2f3}
+  .frame{min-height:240px;border:1px dashed rgba(139,92,246,.55);border-radius:18px;background:linear-gradient(145deg,rgba(139,92,246,.1),rgba(34,211,238,.045));transition:.25s ease}
+  .frame:hover,.frame.drag{border-color:var(--accent-2);background:linear-gradient(145deg,rgba(139,92,246,.18),rgba(34,211,238,.09));transform:translateY(-2px)}
+  .frame-icon{width:54px;height:54px;border:1px solid rgba(139,92,246,.5);border-radius:16px;background:rgba(139,92,246,.16);color:#c4b5fd;display:grid;place-items:center}
+  .frame-icon svg{width:24px;height:24px}.frame-label{font-size:18px;color:var(--ink);margin-top:18px}.frame-sub{color:var(--ink-faint)}
+  .frame-filename{color:#67e8f9}
+  .row,.row-file{border-bottom-color:var(--line);padding:17px 0}.row:last-child{border-bottom:0}.main{color:#e8ecf8}.row-hint{color:var(--ink-faint)}
+  .toggle .track{background:#30384c}.toggle input:checked~.track{background:linear-gradient(90deg,var(--accent),var(--accent-2))}.toggle .thumb{background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .pillgroup{border-color:var(--line);background:rgba(255,255,255,.05)}.pillgroup button{color:var(--ink-faint)}.pillgroup button.active{background:var(--accent);color:white;box-shadow:0 4px 12px rgba(139,92,246,.3)}
+  .ai-badge{background:rgba(251,191,36,.13);border-color:rgba(251,191,36,.35);color:var(--gold)}
+  .file-btn{border-color:var(--line);background:rgba(255,255,255,.05);color:#c4b5fd}.file-btn:hover{border-color:var(--accent);background:rgba(139,92,246,.16)}
+  .go{height:64px;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:linear-gradient(100deg,#7c3aed,#0891b2);box-shadow:0 16px 32px rgba(76,29,149,.3);font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+  .go:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 20px 40px rgba(76,29,149,.4)}
+  #status{border-color:var(--line);border-radius:16px;background:rgba(20,24,36,.82);color:var(--ink-dim)}
+  #status.ok{border-color:rgba(52,211,153,.4);color:var(--green)}#status.err{border-color:rgba(248,113,113,.4)}
+  #result{margin-top:24px}.result-block{border-color:var(--line);border-radius:var(--r-lg);background:var(--paper);box-shadow:0 14px 38px rgba(0,0,0,.18)}
+  .result-block h3{color:#e9edfa}.result-block .title{color:#c4b5fd;font-size:22px}.tags{color:#67e8f9}.video-tabs{border-bottom-color:var(--line)}.video-tab-btn{color:var(--ink-faint)}.video-tab-btn.active{background:#252b3b;color:#fff;border-color:#fff;border-bottom-color:var(--accent)}
+  video,audio{background:#05060a;border:1px solid var(--line);border-radius:14px}.download{color:#67e8f9}.badge{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.26);color:#c4b5fd}
+  footer{color:var(--ink-faint)}
+  @media(max-width:600px){
+    html,body{width:100%;min-width:0}
+    body{padding:0 10px 56px;overflow-x:hidden}
+    .app,form,#status,#result,footer{width:100%;max-width:100%;min-width:0}
+    .app{padding-top:10px}
+    .hero{width:100%;padding:22px 16px 24px;border-radius:22px;overflow:hidden}
+    .hero-top{margin-bottom:34px;gap:10px}.mark{font-size:8px;min-width:0}.mark svg{flex:0 0 auto}
+    .live-pill{flex:0 0 auto;padding-left:7px;padding-right:7px}
+    h1{font-size:clamp(34px,12vw,58px);overflow-wrap:anywhere}
+    .hero p{font-size:14px;overflow-wrap:anywhere}
+    .module{width:100%;min-width:0;padding:14px;border-radius:19px;overflow:hidden}
+    .module-head{min-width:0}.module-title{font-size:11px;min-width:0;overflow-wrap:anywhere}
+    .frame{width:100%;min-width:0;min-height:205px;padding:24px 12px;overflow:hidden}
+    .frame-label,.frame-sub,.frame-filename{max-width:100%;overflow-wrap:anywhere;text-align:center}
+    .row,.row-file{width:100%;min-width:0;gap:10px}
+    .row label.main{min-width:0;overflow-wrap:anywhere;font-size:12px}
+    .row .row-controls{min-width:0;gap:6px}
+    .row-file{flex-wrap:wrap}.row-file .main{min-width:0;flex:1 1 100%;font-size:12px}.file-name{max-width:calc(100% - 90px)}
+    .row-hint{max-width:100%;overflow-wrap:anywhere;line-height:1.5}
+    .pillgroup button{padding-left:9px;padding-right:9px}
+    .go{width:100%;min-width:0;font-size:11px;letter-spacing:.04em}
+    #status{max-width:100%;border-radius:16px;padding:12px;overflow:hidden}
+    #status .txt{min-width:0;overflow-wrap:anywhere}.elapsed{flex:0 0 auto}
+    #result{overflow:hidden}.result-block{width:100%;min-width:0;padding:16px}.result-block p{overflow-wrap:anywhere}
+    .video-tabs{max-width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}.video-tab-btn{flex:0 0 auto;font-size:10px;padding:10px 6px}
+  }
+  @media(max-width:360px){
+    html,body{width:100% !important;max-width:100% !important;margin:0 !important;padding:0 !important;overflow-x:hidden !important}
+    body{padding-bottom:40px !important}
+    .app,form{display:block !important;position:relative !important;left:0 !important;right:auto !important;width:100% !important;max-width:100% !important;margin-left:0 !important;margin-right:0 !important}
+    .app{padding:4px !important}
+    .hero{width:100%;padding:14px 8px 16px;margin-bottom:14px;border-radius:12px}
+    .hero-top{align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+    .mark{max-width:100%;font-size:7px}.live-pill{margin-left:0;font-size:8px}
+    h1{font-size:27px}.hero p{font-size:10px;line-height:1.35}
+    .module{display:block;width:100% !important;max-width:100% !important;padding:7px;margin-bottom:9px;border-radius:12px}
+    .module-head{display:block;position:relative;min-height:38px;margin-bottom:6px;overflow:hidden}
+    .ghost-num{position:absolute;left:0;bottom:-2px;font-size:19px;line-height:1;margin:0;opacity:.8;z-index:0}
+    .module-title{display:block;position:relative;z-index:1;padding:0 0 0 8px;font-size:8px;line-height:1.2;letter-spacing:.07em;white-space:nowrap}
+    .module-body{display:block;width:100% !important;max-width:100% !important;padding:0 7px;border-radius:10px;box-shadow:none}
+    .frame{width:100%;min-height:145px;margin:7px 0;padding:16px 5px;border-radius:9px}
+    .frame-icon{width:30px;height:30px;border-radius:8px}.frame-icon svg{width:14px;height:14px}
+    .frame-label{font-size:10px;margin-top:8px;line-height:1.25}.frame-sub{font-size:7px;line-height:1.25}
+    .row{width:100%;align-items:flex-start;gap:4px;padding:8px 1px}
+    .row label.main{display:block;width:100%;flex:0 0 100%;font-size:9px;line-height:1.3}
+    .row .row-controls{display:flex;flex:0 0 auto;width:100%;margin:0;justify-content:flex-start;gap:4px}
+    .row-file{width:100%;align-items:flex-start;gap:4px;padding:8px 1px;flex-wrap:wrap}
+    .row-file .main{display:block;width:100%;flex:0 0 100%;font-size:9px;line-height:1.3}
+    .file-name{max-width:calc(100% - 70px);font-size:7px}.file-btn{font-size:7px;padding:4px 6px}
+    .row-hint{font-size:7px}.pillgroup button{font-size:8px;padding:3px 6px}
+    .toggle{width:32px;height:19px}.toggle .thumb{width:13px;height:13px}.toggle input:checked ~ .thumb{transform:translateX(13px)}
+    .go{width:100%;height:42px;margin-top:10px;padding:8px 4px;font-size:8px}
+  }
+
+  /* Keep section labels and numbers in normal flow; never overlap. */
+  .module-head{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:flex-start !important;
+    justify-content:flex-start !important;
+    min-height:0 !important;
+    height:auto !important;
+    overflow:visible !important;
+  }
+  .module-head .module-title{
+    order:1;
+    display:block !important;
+    position:static !important;
+    padding:0 !important;
+    line-height:1.2 !important;
+    white-space:normal !important;
+  }
+  .module-head .ghost-num{
+    order:2;
+    display:block !important;
+    position:static !important;
+    margin:2px 0 0 !important;
+    line-height:1 !important;
+    opacity:.8;
+  }
+</style>
 </head>
 <body>
 <div class="app">
@@ -345,13 +482,13 @@
       </div>
     </div>
     <h1>Auto Video Editor</h1>
-    <p>Upload your video, select the features you need, and the system will process it automatically — silent segments removed, subtitles generated, audio extracted, and an AI-generated title, caption, highlight reel, or translated voice dub prepared, all in one pass.</p>
+    <p>Upload your video, select the features you need, and the system will process it automatically — silent segments removed, subtitles generated, audio extracted, and an AI-generated summary, highlight reel, or translated voice dub prepared, all in one pass.</p>
   </div>
 
   <form id="uploadForm">
 
     <div class="module">
-      <div class="module-head"><span class="ghost-num">01</span><span class="module-title">Video Source</span></div>
+      <div class="module-head"><span class="module-title">Video Source</span></div>
       <label class="frame" id="dropFrame">
         <span class="corner tl"></span><span class="corner tr"></span>
         <span class="corner bl"></span><span class="corner br"></span>
@@ -366,7 +503,7 @@
     </div>
 
     <div class="module">
-      <div class="module-head"><span class="ghost-num">02</span><span class="module-title">Editing Settings</span></div>
+      <div class="module-head"><span class="module-title">Editing Settings</span></div>
       <div class="module-body">
         <div class="row">
           <label class="main" for="removeSilence">Auto remove silence</label>
@@ -395,18 +532,37 @@
           <span class="file-name" id="wmName"></span>
           <label class="file-btn">Select File<input type="file" id="watermarkFile" accept="image/*"></label>
         </div>
+        <div class="row">
+          <label class="main">Output quality</label>
+          <div class="row-controls"><select id="outputResolution"><option value="1080p">1080p</option><option value="720p">720p (faster)</option><option value="original">Original</option></select></div>
+        </div>
+        <div class="row">
+          <label class="main">Video orientation</label>
+          <div class="row-controls">
+            <div class="pillgroup" id="aspectRatioPill">
+              <button type="button" data-aspect="original" class="active">Landscape 16:9</button>
+              <button type="button" data-aspect="vertical">Portrait 9:16</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <label class="main">Noise removal</label>
+          <div class="row-controls"><span class="toggle"><input type="checkbox" id="noiseRemoval"><span class="track"></span><span class="thumb"></span></span></div>
+        </div>
       </div>
     </div>
 
     <div class="module">
-      <div class="module-head"><span class="ghost-num">03</span><span class="module-title">AI Features</span></div>
+      <div class="module-head"><span class="module-title">AI Features</span></div>
       <div class="module-body">
         <div class="row">
-          <label class="main" for="aiTitleCaption">AI title & caption<span class="ai-badge">AI</span></label>
+          <label class="main" for="aiSummary">AI summary<span class="ai-badge">AI</span></label>
           <div class="row-controls">
-            <span class="toggle"><input type="checkbox" id="aiTitleCaption" checked><span class="track"></span><span class="thumb"></span></span>
+            <span class="toggle"><input type="checkbox" id="aiSummary" checked><span class="track"></span><span class="thumb"></span></span>
           </div>
         </div>
+        <div class="row"><label class="main">AI chapters &amp; timestamps<span class="ai-badge">AI</span></label><div class="row-controls"><span class="toggle"><input type="checkbox" id="aiChapters"><span class="track"></span><span class="thumb"></span></span></div></div>
+        <div class="row"><label class="main">Social media caption<span class="ai-badge">AI</span></label><div class="row-controls"><span class="toggle"><input type="checkbox" id="socialCaption"><span class="track"></span><span class="thumb"></span></span></div></div>
         <div class="row">
           <label class="main" for="aiHighlights">Auto highlight clips<span class="ai-badge">AI</span></label>
           <div class="row-controls">
@@ -435,6 +591,7 @@
     <span class="txt" id="statusTxt"></span>
     <span class="elapsed" id="statusElapsed"></span>
   </div>
+  <button type="button" id="cancelBtn" class="go" style="display:none;background:#7f1d1d">Cancel processing</button>
   <div id="result"></div>
 
 </div>
@@ -458,6 +615,7 @@ const wmInput = document.getElementById('watermarkFile');
 const wmName = document.getElementById('wmName');
 const langPill = document.getElementById('langPill');
 const dubLangPill = document.getElementById('dubLangPill');
+const aspectRatioPill = document.getElementById('aspectRatioPill');
 
 let subtitleLangValue = 'id';
 langPill.addEventListener('click', (e) => {
@@ -477,7 +635,18 @@ dubLangPill.addEventListener('click', (e) => {
   dubLangValue = btn.dataset.lang;
 });
 
+let aspectRatioValue = 'original';
+aspectRatioPill.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  aspectRatioPill.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  aspectRatioValue = btn.dataset.aspect;
+});
+
 let elapsedTimer = null, elapsedStart = null;
+let activeJobId = null;
+const cancelBtn = document.getElementById('cancelBtn');
 
 function fmtSize(bytes){
   if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
@@ -541,10 +710,16 @@ form.addEventListener('submit', async (e) => {
   fd.append('subtitle', document.getElementById('subtitle').checked);
   fd.append('subtitle_lang', subtitleLangValue);
   fd.append('extract_audio', document.getElementById('extractAudio').checked);
-  fd.append('ai_title_caption', document.getElementById('aiTitleCaption').checked);
+  fd.append('ai_summary', document.getElementById('aiSummary').checked);
   fd.append('ai_highlights', document.getElementById('aiHighlights').checked);
   fd.append('ai_dubbing', document.getElementById('aiDubbing').checked);
   fd.append('dub_lang', dubLangValue);
+  fd.append('output_resolution', document.getElementById('outputResolution').value);
+  fd.append('aspect_ratio', aspectRatioValue);
+  fd.append('noise_removal', document.getElementById('noiseRemoval').checked);
+  fd.append('ai_chapters', document.getElementById('aiChapters').checked);
+  fd.append('social_caption', document.getElementById('socialCaption').checked);
+  fd.append('performance_mode', 'balanced');
   const wm = wmInput.files[0];
   if (wm) fd.append('watermark', wm);
 
@@ -560,37 +735,42 @@ form.addEventListener('submit', async (e) => {
     setStatus('Video upload failed: ' + JSON.stringify(data), 'err'); setLive(false,'Failed'); stopElapsed();
     submitBtn.disabled = false; return;
   }
-  pollStatus(data.job_id);
+  activeJobId = data.job_id; cancelBtn.style.display = 'block'; pollStatus(data.job_id);
 });
 
 async function pollStatus(jobId) {
   const res = await fetch('/status/' + jobId);
   const job = await res.json();
 
-  if (job.status === 'error') {
+  if (job.status === 'error' || job.status === 'cancelled') {
     setStatus('An error occurred: ' + job.error, 'err'); setLive(false, 'Failed'); stopElapsed();
-    submitBtn.disabled = false; return;
+    submitBtn.disabled = false; cancelBtn.style.display = 'none'; return;
   }
   if (job.status === 'done') {
     setStatus('Processing completed', 'ok'); setLive(false, 'Completed'); stopElapsed();
     showResult(job.result);
-    submitBtn.disabled = false; return;
+    submitBtn.disabled = false; cancelBtn.style.display = 'none'; return;
   }
-  setStatus(job.step + ' ...');
+  setStatus(`${job.step} ... ${job.progress || 0}%`);
   setTimeout(() => pollStatus(jobId), 2000);
 }
+
+cancelBtn.addEventListener('click', async () => {
+  if (activeJobId) await fetch('/cancel/' + activeJobId, {method:'POST'});
+  setStatus('Cancelling...');
+});
 
 function showResult(result) {
   resultDiv.classList.add('show');
   let html = '';
 
-  if (result.title_caption) {
-    const tc = result.title_caption;
-    html += `<div class="result-block"><h3>Title & Caption (AI Generated)</h3>
-      <p class="title">${tc.title || ''}</p>
-      <p>${tc.caption || ''}</p>
-      <p class="tags">${(tc.hashtags || []).map(h => '#' + h.replace('#','')).join('  ')}</p></div>`;
+  if (result.summary) {
+    html += `<div class="result-block"><h3>AI Summary</h3>
+      <p>${result.summary}</p></div>`;
   }
+  if (result.chapters && result.chapters.length) html += `<div class="result-block"><h3>AI Chapters</h3>${result.chapters.map(c => `<p><b>${Number(c.start || 0).toFixed(1)}s</b> — ${c.title || ''}</p>`).join('')}</div>`;
+  if (result.social_caption) html += `<div class="result-block"><h3>Social Media Caption</h3><p><b>${result.social_caption.hook || ''}</b></p><p>${result.social_caption.caption || ''}</p><p>${(result.social_caption.hashtags || []).join(' ')}</p></div>`;
+  if (result.subtitle_srt) html += `<div class="result-block"><h3>Subtitle files</h3><a class="download" href="${result.subtitle_srt}" download>↓ Download SRT</a> <a class="download" href="${result.subtitle_vtt}" download>↓ Download VTT</a></div>`;
 
   // Build the set of video results as tabs (Final / Highlight / Dubbed),
   // so the user clicks between them instead of scrolling past several

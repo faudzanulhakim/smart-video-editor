@@ -17,22 +17,26 @@ Available in 2 forms:
 
 1. **Auto silence removal** — detects and cuts out silent or inactive segments of the video
 (e.g. long dead air), shortening the video without manually searching for timestamps.
-2. **Auto subtitle** — transcribes the video's speech into text and burns it directly into
-the video, with a choice of Indonesian or English (web app).
+2. **Auto subtitle** — detects the video's original speech language, translates the transcript
+to the selected output language, and burns it directly into the video. The web app supports
+Indonesian (ID) and English (EN).
 3. **Audio extraction (MP3)** — extracts just the audio track as a separate MP3 file, useful
 when you only need the audio, e.g. turning a video recording into a podcast (web app).
 4. **Watermark** (logo/image) \& **intro/outro** (CLI/batch).
-5. **AI title \& caption / highlight selection** — automatic title + caption generation from
-the video's content, and automatic highlight selection (cut into separate short clips) —
-uses an OpenAI-compatible API.
-6. **AI auto dubbing** — transcribes the original speech, translates it (AI), generates a new
-voice track in the target language (Indonesian or English) with automatic male/female voice
-matching per segment based on the original speaker's pitch, and mixes it onto the video as an
-alternate audio track — the visible subtitle and the dubbed speech always say the same thing.
+5. **AI summary** — generates a concise 3–5 sentence summary from the video transcript.
+6. **AI highlight selection** — automatically selects interesting timestamp ranges and cuts
+them into a separate highlight video.
+7. **AI chapters \& timestamps** — creates chapter titles with their starting timestamps.
+8. **Social media caption generator** — generates a hook, caption, and hashtags for publishing.
+These features use an OpenAI-compatible API.
+9. **AI auto dubbing** — detects the original speech language, translates the script to the
+selected target language (Indonesian or English), generates a new voice track with automatic
+male/female voice matching per segment based on the original speaker's pitch, and mixes it
+onto the video as an alternate audio track.
 
 **Use case**: ideal for turning raw footage (podcast recordings, webinars, raw clips) into
-ready-to-publish content — clean video with dead air removed, subtitles included, a draft
-title/caption generated automatically, and (optionally) a dubbed version in another language —
+ready-to-publish content — clean video with dead air removed, subtitles included, a summary,
+chapters, social caption, and (optionally) a dubbed version in another language —
 with no manual work from scratch.
 
 ## Demo Video
@@ -55,28 +59,30 @@ with no manual work from scratch.
     <td align="center" width="33%">
       <img src="docs/pictures/screenshot-processing.png" alt="AI features and processing status" width="100%"/>
       <br><b>AI Features & Processing</b>
-      <br><sub>Toggle AI title/caption, highlight clips, and auto dubbing; track live progress</sub>
+<br><sub>Toggle AI summary, highlights, chapters, captions, and dubbing; track detailed progress</sub>
     </td>
     <td align="center" width="33%">
-      <img src="docs/pictures/screenshot-result.png" alt="Completed result with AI title, caption, and downloads" width="100%"/>
+      <img src="docs/pictures/screenshot-result.png" alt="Completed result with AI summary and downloads" width="100%"/>
       <br><b>Result</b>
-      <br><sub>AI-generated title/caption plus tabs for the final, highlight, dubbed video, and audio</sub>
+<br><sub>AI summary, chapters, social caption, subtitle downloads, and video/audio results</sub>
     </td>
   </tr>
 </table>
 
-## AI Setup (required for auto title/caption, highlight, and dubbing features)
+## AI Setup (required for AI features)
 
 The AI features use the standard OpenAI-compatible API, so they can be pointed at any
 compatible AI provider (including free ones) without changing any code — just set these
 3 env vars:
 
 * `AI_API_KEY` (required) — API key from your chosen provider
-* `AI_BASE_URL` (optional, default: Cerebras — free, get one at https://cloud.cerebras.ai)
-* `AI_MODEL` (optional, default: `gpt-oss-120b`)
+* `AI_BASE_URL` (required) — OpenAI-compatible API endpoint
+* `AI_MODEL` (required) — model name supported by that provider
+* `MAX_UPLOAD_SIZE_MB` (optional, default: `2048`) — maximum size of each uploaded video or watermark.
 
-Without `AI_API_KEY`, the silence-removal, subtitle, and watermark features still work
-normally — only the AI features (title/caption, highlight, dubbing) will be disabled.
+Without all three AI variables, silence removal, subtitles, watermark, resizing, noise removal,
+audio extraction, and subtitle downloads still work normally. AI summary, highlights, chapters,
+social captions, and dubbing require the variables to be configured.
 
 Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no code changes):
 
@@ -96,9 +102,9 @@ Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no
 ### Prerequisites
 
 * [Docker](https://docs.docker.com/get-docker/) \& Docker Compose installed
-* An API key from one of the AI providers (see **AI Setup** above) — optional, but required if you want the AI title/caption, highlight, or dubbing features
+* An API key from one of the AI providers (see **AI Setup** above) — optional, but required if you want AI summary, highlights, chapters, social captions, or dubbing
 
-### 1\. Clone the repo and enter the project folder
+1\. Clone the repo and enter the project folder
 
 ```bash
 git clone <this-repo-url>
@@ -151,11 +157,30 @@ docker compose up --build -d
 
 ### 4\. Access the web app
 
-Open **http://localhost:8000** in your browser → upload a video → check the features you want
-(silence removal, subtitle + language, audio extraction, watermark, AI title/caption, AI
-highlight, AI dubbing + target language) → click **"Start Video Processing"**. The results
-(final video, highlight, dubbed video, audio) appear as tabs on the same page and can be
+Open **http://localhost:8000** in your browser → upload a video → choose the features you want
+(silence removal, subtitles, SRT/VTT download, noise removal, 720p/1080p output, Landscape 16:9
+or Portrait 9:16 format, audio extraction, watermark, AI summary, highlights, chapters, social
+caption, or dubbing) → click **"Start Video Processing"**. The page displays detailed stage progress and
+provides a Cancel button while processing. Final, highlight, dubbed, and audio results can be
 played or downloaded directly.
+
+### Subtitle and dubbing languages
+
+The language buttons are **output-language** choices. The source language of the video is
+detected automatically; it is not forced to Indonesian or English. Subtitle language and
+dubbing language can be selected independently:
+
+| Source video | Subtitle | Dubbing | Result |
+|---|---|---|---|
+| English | ID | ID | Indonesian subtitle and Indonesian voice |
+| English | EN | EN | English subtitle and English voice |
+| Indonesian | EN | EN | English translation and English voice |
+| Indonesian | ID | ID | Indonesian subtitle and Indonesian voice |
+| Any | EN | ID | English subtitle and Indonesian voice |
+
+AI translation and dubbing require a configured `AI_API_KEY`. Dubbing additionally requires
+outbound internet access for `edge-tts` voice generation. Restart or rebuild the application
+after changing the code or environment configuration.
 
 ### Other common commands
 
@@ -196,7 +221,8 @@ sudo apt install ffmpeg          # Ubuntu/Debian
 pip install -r requirements.txt
 ```
 
-> Note: CLI/batch mode does not include the AI features (title/caption, highlight, dubbing) —
+> Note: CLI/batch mode does not include the web-only AI features (summary, highlight, chapters,
+> social caption, dubbing) —
 > `edge-tts`/`librosa` (used only by the dubbing feature) are still installed via
 > `requirements.txt`, but only the web app currently wires the AI features up.
 
@@ -232,8 +258,8 @@ smart-video-editor/
 ├── requirements.txt
 ├── .env.example           - copy to .env and fill in your AI provider config
 ├── core/
-│   ├── editor.py           - video editing logic (silence removal, subtitle, watermark, audio extraction, etc.)
-│   ├── ai_helper.py         - AI features (title/caption, highlight selection) via OpenAI-compatible API
+│   ├── editor.py           - video editing logic (silence removal, subtitles, resizing, noise removal, etc.)
+│   ├── ai_helper.py         - AI summary, highlights, chapters, and social captions via OpenAI-compatible API
 │   └── dubbing.py           - AI auto dubbing (translate, gender-matched TTS voice, mux onto video)
 ├── web/
 │   ├── main.py              - web app backend (FastAPI)
@@ -243,13 +269,18 @@ smart-video-editor/
     └── pictures/             - screenshots used in this README
 ```
 
-> `uploads/` and `outputs/` are created automatically at runtime (mounted as Docker volumes)
-> and are not part of the repo — they hold in-progress and processed video files.
+> `uploads/`, `outputs/`, and `transcript_cache/` are created automatically at runtime (mounted
+> as Docker volumes when configured) and should not be committed to the repository. The cache
+> stores transcript results keyed by the video content, language, task, and Whisper model so
+> repeated processing of the same video is faster.
 
 ## Notes
 
-* Subtitle processing (speech-to-text) takes time depending on `model_size` and video length —
-`small` is usually accurate enough and not too slow on a typical CPU.
+* The web app uses **Balanced mode** by default: Whisper `small`, FFmpeg `veryfast`, and staged
+progress reporting. `720p` output is faster than `1080p`; Portrait 9:16 output requires video
+re-encoding and may crop the original frame.
+* Subtitle processing (speech-to-text) takes time depending on model and video length. Transcript
+results are cached for reuse by summary, highlights, chapters, captions, dubbing, and subtitles.
 * AI auto dubbing is the slowest feature (transcription + AI translation + TTS generation per
 segment + audio muxing) and doesn't lip-sync — mouth movement in the video still follows the
 original language. Speaker gender per segment is matched using a rough pitch-based heuristic,
@@ -259,4 +290,18 @@ not mixed with it.
 * Web app jobs are stored in memory (sufficient for personal/small-team use). If you later
 need multi-user support with many parallel/queued jobs, this can be extended with a queue
 system (Redis/Celery) — just ask if that's needed.
+* Uploads are restricted to supported video/image extensions, sanitized to safe basenames, and
+  limited by `MAX_UPLOAD_SIZE_MB`. Download paths and job IDs are also validated before files
+  are served.
+* Cancelling a job is cooperative: the request is recorded immediately and the worker stops at
+  the next processing checkpoint. A running FFmpeg or external AI/TTS request may finish before
+  cancellation takes effect.
+
+## Tests
+
+Run the dependency-free security tests with:
+
+```bash
+python -m unittest discover -s tests -v
+```
 

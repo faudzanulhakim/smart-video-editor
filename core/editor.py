@@ -4,6 +4,7 @@ Shared by the CLI (auto_video_editor.py) and the web app (web/main.py).
 """
 
 import subprocess
+import json
 from pathlib import Path
 
 # --- Pillow >= 10 compatibility with MoviePy 1.0.3 ------------------------
@@ -271,6 +272,44 @@ def write_srt(segments, srt_path):
             f.write(f"{fmt_time(seg['start'])} --> {fmt_time(seg['end'])}\n")
             f.write(f"{seg['text']}\n\n")
     return srt_path
+
+
+def write_vtt(segments, vtt_path):
+    def fmt_time(t):
+        h = int(t // 3600)
+        m = int((t % 3600) // 60)
+        s = t % 60
+        return f"{h:02d}:{m:02d}:{s:06.3f}"
+    with open(vtt_path, "w", encoding="utf-8") as f:
+        f.write("WEBVTT\n\n")
+        for seg in segments:
+            f.write(f"{fmt_time(seg['start'])} --> {fmt_time(seg['end'])}\n{seg['text']}\n\n")
+    return vtt_path
+
+
+def resize_video(video_path, output_path, mode="original", resolution="1080p"):
+    sizes = {"720p": (1280, 720), "1080p": (1920, 1080)}
+    if mode == "vertical":
+        w, h = (720, 1280) if resolution == "720p" else (1080, 1920)
+        vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
+    elif resolution in sizes:
+        w, h = sizes[resolution]
+        vf = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2"
+    else:
+        return Path(video_path)
+    cmd = ["ffmpeg", "-y", "-i", str(video_path), "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", str(output_path)]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if not Path(output_path).exists():
+        raise RuntimeError(f"Failed to resize video. ffmpeg details:\n{result.stdout[-1200:]}")
+    return Path(output_path)
+
+
+def remove_noise(video_path, output_path):
+    cmd = ["ffmpeg", "-y", "-i", str(video_path), "-af", "highpass=f=80,lowpass=f=12000,afftdn=nf=-25", "-c:v", "copy", "-c:a", "aac", str(output_path)]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if not Path(output_path).exists():
+        raise RuntimeError(f"Failed to remove noise. ffmpeg details:\n{result.stdout[-1200:]}")
+    return Path(output_path)
 
 
 # Default subtitle style: bold, white with a thick black outline + subtle

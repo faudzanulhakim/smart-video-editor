@@ -6,7 +6,7 @@ just by setting the 3 env vars below -- there's no built-in provider in
 this code, so switching providers = switching env vars, no code changes
 needed:
 
-- suggest_title_caption : generate a title, caption, and hashtags from the transcript
+- suggest_summary       : generate a concise summary from the transcript
 - suggest_highlights    : pick the most interesting parts of the transcript for a highlight reel
 
 Env vars that are REQUIRED (no defaults -- if empty, a clear error is raised):
@@ -93,22 +93,13 @@ def _strip_json_fences(text):
     return text.replace("```json", "").replace("```", "").strip()
 
 
-def _salvage_title_caption(text):
+def _salvage_summary(text):
     """
-    If the JSON got cut off (e.g. because a free provider truncated the
-    output midway), try to extract whatever title/caption/hashtags are
-    already complete via regex, instead of returning nothing at all.
+    If the JSON got cut off, salvage the summary text instead of returning nothing.
     """
     import re
-    title = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
-    caption = re.search(r'"caption"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
-    hashtags = re.findall(r'"(#?[A-Za-z0-9_]+)"', text.split('"hashtags"')[-1]) \
-        if '"hashtags"' in text else []
-    return {
-        "title": title.group(1) if title else "",
-        "caption": caption.group(1) if caption else text[:300],
-        "hashtags": [h if h.startswith("#") else f"#{h}" for h in hashtags],
-    }
+    summary = re.search(r'"summary"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+    return summary.group(1) if summary else text[:1000]
 
 
 LANGUAGE_NAMES = {"id": "Indonesian", "en": "English"}
@@ -128,16 +119,16 @@ def _looks_like_valid_response(parsed):
     for, not just valid JSON that happens to be something unrelated (e.g. a
     moderation classifier replying {"safe": true})."""
     if isinstance(parsed, dict):
-        return "title" in parsed or "caption" in parsed
+        return "summary" in parsed
     if isinstance(parsed, list):
         return True  # empty list is a valid (if unlikely) highlight result
     return False
 
 
-def suggest_title_caption(segments, platform="general", language="id"):
-    """Return dict: {title, caption, hashtags: [...]}
+def suggest_summary(segments, platform="general", language="id"):
+    """Return a concise summary of the video transcript.
 
-    `language` controls the language of the generated title/caption/hashtags
+    `language` controls the language of the generated summary
     ("id" or "en") -- this should match the subtitle language chosen by the
     user, NOT necessarily the language of the prompt/code itself.
     """
@@ -145,7 +136,7 @@ def suggest_title_caption(segments, platform="general", language="id"):
     client = _client(base_url, api_key)
     transcript = _segments_to_text(segments, with_timestamps=False)
     if not transcript.strip():
-        return {"title": "", "caption": "", "hashtags": []}
+        return ""
 
     lang_name = LANGUAGE_NAMES.get(language, "Indonesian")
 
@@ -153,16 +144,12 @@ def suggest_title_caption(segments, platform="general", language="id"):
 
 {transcript}
 
-Create the following for the {platform} platform:
-1. An engaging video title (max 10 words)
-2. A short caption for the post (2-3 sentences)
-3. 5 relevant hashtags
-
-Write the title, caption, and hashtags in {lang_name}, regardless of what
+    Create a concise, informative summary of this video in 3-5 sentences.
+Write the summary in {lang_name}, regardless of what
 language the transcript above is in.
 
 Reply ONLY in the following JSON format, with no other text:
-{{"title": "...", "caption": "...", "hashtags": ["...", "..."]}}"""
+{{"summary": "..."}}"""
 
     last_text = ""
     last_resp = None
@@ -181,7 +168,7 @@ Reply ONLY in the following JSON format, with no other text:
             parsed = None
 
         if parsed is not None and _looks_like_valid_response(parsed):
-            return parsed
+            return str(parsed.get("summary", "")).strip()
 
         print(
             f"  [ai_helper] Attempt {attempt}/{MAX_AI_RETRIES} returned an unusable "
@@ -196,7 +183,7 @@ Reply ONLY in the following JSON format, with no other text:
             "Attempting to salvage a partial result...",
             flush=True,
         )
-    return _salvage_title_caption(last_text)
+    return _salvage_summary(last_text)
 
 
 def suggest_highlights(segments, max_highlights=3, target_total_sec=45, language="id"):
@@ -276,3 +263,27 @@ Reply ONLY in the following JSON array format, with no other text:
         })
     salvaged.sort(key=lambda r: r["start"])
     return salvaged
+
+
+def suggest_chapters(segments, language="id"):
+    api_key, base_url, model = _get_config()
+    client = _client(base_url, api_key)
+    transcript = _segments_to_text(segments, with_timestamps=True)
+    prompt = f"Create concise video chapters from this timestamped transcript. Return ONLY JSON array of objects with title and start (seconds). Use {LANGUAGE_NAMES.get(language, 'Indonesian')}.\n{transcript}"
+    resp = client.chat.completions.create(model=model, max_tokens=1200, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
+    try:
+        return json.loads(_strip_json_fences(_extract_text(resp)))
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def suggest_social_caption(segments, language="id"):
+    api_key, base_url, model = _get_config()
+    client = _client(base_url, api_key)
+    transcript = _segments_to_text(segments, with_timestamps=False)
+    prompt = f"Create a social media caption for this video in {LANGUAGE_NAMES.get(language, 'Indonesian')}. Return ONLY JSON with caption, hashtags (array), and hook.\n{transcript}"
+    resp = client.chat.completions.create(model=model, max_tokens=800, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
+    try:
+        return json.loads(_strip_json_fences(_extract_text(resp)))
+    except (json.JSONDecodeError, TypeError):
+        return {"caption": "", "hashtags": [], "hook": ""}
