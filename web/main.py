@@ -154,12 +154,19 @@ def run_job(job_id, video_path, config):
             shutil.copy(video_path, pre_path)
         source_segments = []
         segments = []
-        source_segments = []
         if config["needs_transcript"]:
             update("Generating transcript (speech-to-text)", 30)
             # Detect the source language automatically. The selected subtitle
             # language is an OUTPUT language, not the Whisper input language.
-            lang = config.get("subtitle_lang", "id")
+            # When dubbing is enabled, subtitle text and spoken text must use
+            # the same target language and the same translated segments. This
+            # avoids two independent AI translations producing different
+            # wording for the subtitle and the voice track.
+            lang = (
+                config.get("dub_lang", "id")
+                if config.get("ai_dubbing")
+                else config.get("subtitle_lang", "id")
+            )
             task = "transcribe"
             model_size = "small" if config.get("performance_mode") == "balanced" else "medium"
             file_hash = hashlib.sha256()
@@ -245,10 +252,11 @@ def run_job(job_id, video_path, config):
                 f"AI preparing {'Indonesian' if dub_lang == 'id' else 'English'} script for dubbing",
                 85,
             )
-            # Dubbing language is independent from subtitle language. Always
-            # translate from the detected-language transcript to the selected
-            # dubbing language, including ID -> ID normalization.
-            dub_segments = dubbing.translate_segments(source_segments, target_language=dub_lang)
+            # Reuse the exact translated segments already used for the
+            # subtitle. Do not translate the source a second time: separate
+            # AI calls can produce different wording even for the same target
+            # language, making the voice and visible subtitle disagree.
+            dub_segments = segments
 
             update("Estimating speaker gender per segment", 87)
             genders = dubbing.detect_segment_genders(pre_path, segments)
