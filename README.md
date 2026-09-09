@@ -78,11 +78,14 @@ compatible AI provider (including free ones) without changing any code — just 
 * `AI_API_KEY` (required) — API key from your chosen provider
 * `AI_BASE_URL` (required) — OpenAI-compatible API endpoint
 * `AI_MODEL` (required) — model name supported by that provider
-* `MAX_UPLOAD_SIZE_MB` (optional, default: `2048`) — maximum size of each uploaded video or watermark.
+* `MAX_UPLOAD_SIZE_MB` (optional, default: `2048`) — maximum size of each uploaded video or watermark, in MB.
 
 Without all three AI variables, silence removal, subtitles, watermark, resizing, noise removal,
 audio extraction, and subtitle downloads still work normally. AI summary, highlights, chapters,
-social captions, and dubbing require the variables to be configured.
+social captions, and dubbing require the variables to be configured. The web upload limit defaults
+to 2048 MB per video or watermark. To customize it in Docker, add
+`MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB}` under `environment` in `docker-compose.yml`, then
+set the value in `.env` and recreate the container.
 
 Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no code changes):
 
@@ -130,6 +133,7 @@ nano .env
 AI_API_KEY=your-api-key-here
 AI_BASE_URL=https://api.cerebras.ai/v1
 AI_MODEL=gpt-oss-120b
+MAX_UPLOAD_SIZE_MB=2048
 ```
 
 > Change `AI_BASE_URL` and `AI_MODEL` to match your chosen provider (see the list above). If
@@ -182,6 +186,11 @@ AI translation and dubbing require a configured `AI_API_KEY`. Dubbing additional
 outbound internet access for `edge-tts` voice generation. Restart or rebuild the application
 after changing the code or environment configuration.
 
+Supported video uploads are validated by file extension. The default maximum size is 2 GB per
+video or watermark. Files larger than the configured limit return HTTP `413`. The backend accepts
+video files supported by the application's security extension list, including common formats such
+as MP4, MOV, MKV, AVI, WEBM, and M4V; the exact list is defined in `core/security.py`.
+
 ### Other common commands
 
 ```bash
@@ -232,7 +241,8 @@ pip install -r requirements.txt
 * **subtitle** — generates automatic subtitles from speech and burns them into the video
 
   * `model_size`: `tiny` (fastest) up to `large-v3` (most accurate, heaviest)
-  * `language`: `"id"` for Indonesian, or `null` for auto-detect
+  * `language`: source-language hint for the CLI transcription
+  * `output_language`: `"id"` or `"en"` for the subtitle output language
 * **intro\_outro** — adds a fixed intro/outro video at the beginning/end
 * **watermark** — adds a watermark image (logo, etc.) to a corner of the video
 
@@ -269,10 +279,10 @@ smart-video-editor/
     └── pictures/             - screenshots used in this README
 ```
 
-> `uploads/`, `outputs/`, and `transcript_cache/` are created automatically at runtime (mounted
-> as Docker volumes when configured) and should not be committed to the repository. The cache
-> stores transcript results keyed by the video content, language, task, and Whisper model so
-> repeated processing of the same video is faster.
+> `uploads/`, `outputs/`, and `transcript_cache/` are created automatically at runtime (the first
+> two are mounted as Docker volumes) and should not be committed to the repository. The web cache
+> stores detected-source transcript results keyed by video content and Whisper model so repeated
+> processing of the same video is faster.
 
 ## Notes
 
