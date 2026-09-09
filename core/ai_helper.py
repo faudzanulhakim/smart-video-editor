@@ -269,12 +269,48 @@ def suggest_chapters(segments, language="id"):
     api_key, base_url, model = _get_config()
     client = _client(base_url, api_key)
     transcript = _segments_to_text(segments, with_timestamps=True)
-    prompt = f"Create concise video chapters from this timestamped transcript. Return ONLY JSON array of objects with title and start (seconds). Use {LANGUAGE_NAMES.get(language, 'Indonesian')}.\n{transcript}"
-    resp = client.chat.completions.create(model=model, max_tokens=1200, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
-    try:
-        return json.loads(_strip_json_fences(_extract_text(resp)))
-    except (json.JSONDecodeError, TypeError):
-        return []
+    prompt = f"Create concise video chapters from this timestamped transcript. Return ONLY JSON array of objects with title and start (seconds), for example [{{'title': 'Introduction', 'start': 0}}]. Use {LANGUAGE_NAMES.get(language, 'Indonesian')}. Do not use markdown or any text outside JSON.\n{transcript}"
+    last_text = ""
+    for attempt in range(1, MAX_AI_RETRIES + 1):
+        resp = client.chat.completions.create(model=model, max_tokens=1200, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
+        last_text = _strip_json_fences(_extract_text(resp))
+        try:
+            parsed = json.loads(last_text)
+            if isinstance(parsed, dict):
+                parsed = parsed.get("chapters", parsed.get("items", []))
+            if isinstance(parsed, list):
+                valid = []
+                for item in parsed:
+                    if not isinstance(item, dict):
+                        continue
+                    title = item.get("title") or item.get("name") or item.get("chapter") or item.get("heading")
+                    raw_start = item.get("start")
+                    if raw_start is None:
+                        raw_start = item.get("timestamp", item.get("start_time", item.get("startTime")))
+                    if not title or raw_start is None:
+                        continue
+                    try:
+                        if isinstance(raw_start, str) and ":" in raw_start:
+                            parts = [float(part) for part in raw_start.strip().split(":")]
+                            if len(parts) == 2:
+                                start = parts[0] * 60 + parts[1]
+                            elif len(parts) == 3:
+                                start = parts[0] * 3600 + parts[1] * 60 + parts[2]
+                            else:
+                                continue
+                        else:
+                            start = float(raw_start)
+                        if start < 0:
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+                    valid.append({"start": start, "title": str(title).strip()})
+                if valid:
+                    return sorted(valid, key=lambda item: item["start"])
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError):
+            pass
+        print(f"  [ai_helper] Chapters attempt {attempt}/{MAX_AI_RETRIES} returned invalid JSON: {last_text[:120]!r}", flush=True)
+    return []
 
 
 def suggest_social_caption(segments, language="id"):
@@ -282,8 +318,21 @@ def suggest_social_caption(segments, language="id"):
     client = _client(base_url, api_key)
     transcript = _segments_to_text(segments, with_timestamps=False)
     prompt = f"Create a social media caption for this video in {LANGUAGE_NAMES.get(language, 'Indonesian')}. Return ONLY JSON with caption, hashtags (array), and hook.\n{transcript}"
-    resp = client.chat.completions.create(model=model, max_tokens=800, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
-    try:
-        return json.loads(_strip_json_fences(_extract_text(resp)))
-    except (json.JSONDecodeError, TypeError):
-        return {"caption": "", "hashtags": [], "hook": ""}
+    for attempt in range(1, MAX_AI_RETRIES + 1):
+        resp = client.chat.completions.create(model=model, max_tokens=800, messages=[{"role": "user", "content": prompt}], **_extra_kwargs_for_model(model))
+        text = _strip_json_fences(_extract_text(resp))
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict) and isinstance(parsed.get("caption"), str) and parsed["caption"].strip():
+                hashtags = parsed.get("hashtags", [])
+                if not isinstance(hashtags, list):
+                    hashtags = [str(hashtags)]
+                return {
+                    "caption": parsed["caption"].strip(),
+                    "hook": str(parsed.get("hook", "")).strip(),
+                    "hashtags": [str(tag).strip() for tag in hashtags if str(tag).strip()],
+                }
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+        print(f"  [ai_helper] Caption attempt {attempt}/{MAX_AI_RETRIES} returned invalid JSON: {text[:120]!r}", flush=True)
+    return {"caption": "", "hashtags": [], "hook": ""}

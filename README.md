@@ -42,29 +42,42 @@ with no manual work from scratch.
 ## Demo Video
 
 > 🎥 **A 1-minute introduction video is on the way — coming soon.**
-> <!-- Once ready, replace this block with either:
->      [![Watch the demo](docs/pictures/video-thumbnail.png)](https://youtu.be/YOUR_VIDEO_ID)
->      or, for a self-hosted clip committed to the repo:
->      <video src="docs/pictures/intro-video.mp4" controls width="100%"></video> -->
+> Add the demo link here when the introduction video is available.
 
 ## Screenshots
 
+The current interface is documented below from upload through AI results:
+
 <table>
   <tr>
-    <td align="center" width="33%">
-      <img src="docs/pictures/screenshot-upload.png" alt="Video upload and editing settings" width="100%"/>
-      <br><b>Upload & Settings</b>
-      <br><sub>Upload a video and choose which editing features to apply</sub>
+    <td align="center" width="50%">
+      <img src="docs/pictures/screenshot-upload.png" alt="Video upload screen" width="100%"/>
+      <br><b>1. Upload video</b>
+      <br><sub>Select a video and configure the basic processing options.</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/pictures/screenshot-processing.png" alt="AI features and processing status" width="100%"/>
-      <br><b>AI Features & Processing</b>
-<br><sub>Toggle AI summary, highlights, chapters, captions, and dubbing; track detailed progress</sub>
+    <td align="center" width="50%">
+      <img src="docs/pictures/Screenshot-setting.png" alt="Video editing settings" width="100%"/>
+      <br><b>2. Choose settings</b>
+      <br><sub>Enable subtitles, cleanup, output format, and other editing features.</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/pictures/screenshot-result.png" alt="Completed result with AI summary and downloads" width="100%"/>
-      <br><b>Result</b>
-<br><sub>AI summary, chapters, social caption, subtitle downloads, and video/audio results</sub>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/pictures/Screenshot-AI-Features.png" alt="AI feature selection" width="100%"/>
+      <br><b>3. Enable AI features</b>
+      <br><sub>Choose summary, chapters, social caption, highlights, or dubbing.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/pictures/screenshot-Vid-result.png" alt="Processed video result" width="100%"/>
+      <br><b>4. View processed video</b>
+      <br><sub>Play or download the generated video and subtitle files.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="docs/pictures/screenshot-AIresult.png" alt="AI generated summary, chapters, and social media caption" width="70%"/>
+      <br><b>5. Review AI results</b>
+      <br><sub>Review the AI summary, chapters and timestamps, and social media caption.</sub>
     </td>
   </tr>
 </table>
@@ -91,7 +104,7 @@ Other providers you can use (just swap `AI_BASE_URL`/`AI_MODEL`/`AI_API_KEY`, no
 
 * **Cerebras** (default) — `https://api.cerebras.ai/v1` — free, sign up at cloud.cerebras.ai
 * **Groq** — `https://api.groq.com/openai/v1` — free, sign up at console.groq.com
-* **OpenRouter** — `https://openrouter.ai/api/v1` — many free models
+* **OpenRouter** — `https://openrouter.ai/api/v1` — many free models, subject to provider and daily limits
 * **Together.ai** — `https://api.together.xyz/v1`
 
 > The dubbing feature additionally uses [edge-tts](https://github.com/rany2/edge-tts) (free,
@@ -213,7 +226,6 @@ Compose. Run `unset AI_API_KEY AI_BASE_URL AI_MODEL` and then rerun `docker comp
 * **Error 402 / `payment_required_error`** — the AI provider's balance/credit is depleted.
 Check that provider's billing dashboard, or switch to another provider (e.g. OpenRouter)
 in `.env`.
-
 \---
 
 ## CLI / Batch mode

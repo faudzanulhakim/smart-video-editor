@@ -768,8 +768,8 @@ function showResult(result) {
     html += `<div class="result-block"><h3>AI Summary</h3>
       <p>${result.summary}</p></div>`;
   }
-  if (result.chapters && result.chapters.length) html += `<div class="result-block"><h3>AI Chapters</h3>${result.chapters.map(c => `<p><b>${Number(c.start || 0).toFixed(1)}s</b> — ${c.title || ''}</p>`).join('')}</div>`;
-  if (result.social_caption) html += `<div class="result-block"><h3>Social Media Caption</h3><p><b>${result.social_caption.hook || ''}</b></p><p>${result.social_caption.caption || ''}</p><p>${(result.social_caption.hashtags || []).join(' ')}</p></div>`;
+  if (Array.isArray(result.chapters) && result.chapters.length) html += `<div class="result-block"><h3>AI Chapters</h3>${result.chapters.map(c => `<p><b>${Number(c.start || 0).toFixed(1)}s</b> — ${c.title || ''}</p>`).join('')}</div>`;
+  if (result.social_caption && (result.social_caption.caption || result.social_caption.hook || (result.social_caption.hashtags || []).length)) html += `<div class="result-block"><h3>Social Media Caption</h3><p><b>${result.social_caption.hook || ''}</b></p><p>${result.social_caption.caption || ''}</p><p>${(result.social_caption.hashtags || []).join(' ')}</p></div>`;
   if (result.subtitle_srt) html += `<div class="result-block"><h3>Subtitle files</h3><a class="download" href="${result.subtitle_srt}" download>↓ Download SRT</a> <a class="download" href="${result.subtitle_vtt}" download>↓ Download VTT</a></div>`;
 
   // Build the set of video results as tabs (Final / Highlight / Dubbed),
